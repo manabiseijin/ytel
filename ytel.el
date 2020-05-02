@@ -55,25 +55,23 @@ too long).")
   (interactive)
   (quit-window))
 
-(defun ytel--format-author (name)
-  "Format a channel name to be inserted in the *ytel* buffer."
-  (let ((n (length name)))
-    (concat (seq-subseq name 0 (min ytel-author-name-reserved-space n))
-	    (when (wholenump (- ytel-author-name-reserved-space n))
-	      (make-string (- ytel-author-name-reserved-space n)
-			   ?\ )))))
+(defface ytel-channel-name-face
+  '((((class color) (background light)) (:foreground "#aa0"))
+    (((class color) (background dark))  (:foreground "#ff0")))
+  "Face used for channel names.")
 
 (defun ytel--format-author (name)
   "Format a channel name to be inserted in the *ytel* buffer."
   (let* ((n (length name))
-	 (extra-chars (- n ytel-author-name-reserved-space)))
-    (if (<= extra-chars 0)
-	(concat name
-		(make-string (abs extra-chars) ?\ )
-		"   ")
-      (concat (seq-subseq name 0 ytel-author-name-reserved-space)
-	      "..."))))
-
+	 (extra-chars (- n ytel-author-name-reserved-space))
+	 (formatted-string (if (<= extra-chars 0)
+			       (concat name
+				       (make-string (abs extra-chars) ?\ )
+				       "   ")
+			     (concat (seq-subseq name 0 ytel-author-name-reserved-space)
+				     "..."))))
+    (propertize formatted-string 'face 'ytel-channel-name-face)))
+  
 (ert-deftest ytel--format-author-test ()
   "Test the `format-author' function."
   (should (equal (length (ytel--format-author "channel name"))
@@ -81,13 +79,19 @@ too long).")
   (should (equal (length (ytel--format-author "very very long channel name"))
 		 (+ 3 ytel-author-name-reserved-space))))
 
+(defface ytel-video-length-face
+  '((((class color) (background light)) (:foreground "#aaa"))
+    (((class color) (background dark))  (:foreground "#77a")))
+  "Face used for the video length.")
+
 (defun ytel--format-video-length (seconds)
   "Given an amount of seconds, format it nicely to be inserted in the *ytel* buffer"
-  (concat (format-seconds "%.2h" seconds)
-	  ":"
-	  (format-seconds "%.2m" (mod seconds 3600))
-	  ":"
-	  (format-seconds "%.2s" (mod seconds 60))))
+  (let ((formatted-string (concat (format-seconds "%.2h" seconds)
+				 ":"
+				 (format-seconds "%.2m" (mod seconds 3600))
+				 ":"
+				 (format-seconds "%.2s" (mod seconds 60)))))
+    (propertize formatted-string 'face 'ytel-video-length-face)))
 
 (ert-deftest ytel--format-video-test ()
   "test the `format-video' test."
@@ -109,9 +113,9 @@ too long).")
 
 The formatting is actually terrible, but this is not final."
   (insert (ytel--format-author (assoc-default 'author video))
-	  " | "
+	  " "
 	  (ytel--format-video-length (assoc-default 'lengthSeconds video))
-	  " | "
+	  " "
 	  (assoc-default 'title video)))
 
 (defun ytel--draw-buffer ()

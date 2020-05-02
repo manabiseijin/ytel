@@ -55,12 +55,11 @@ by relying on the correct external tool.
 
 ## TODO
 Here's a bunch of things that ought to be done someday:
-- [ ] make the `ytel` buffer more visually appealing,
+- [X] make the `ytel` buffer more visually appealing,
 - [ ] add functionality to delete videos from the buffer,
 - [ ] add functionality to add the results of a new search to the buffer, without resetting what's already there,
 - [ ] maybe videos should be represented as a structures (plain alists is very lazy),
 - [ ] calls to the Invidious API are performed synchronously, this might prove to be very stupid.
-
 
 ## FAQ
 
