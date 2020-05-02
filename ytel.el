@@ -51,7 +51,9 @@ too long).")
 	buffer-read-only t)
   (buffer-disable-undo)
   (make-local-variable 'ytel-videos)
-  (hl-line-mode))
+  (hl-line-mode)
+
+  (run-mode-hooks 'ytel-mode-hook))
 
 (defun ytel-quit ()
   "Quit ytel buffer."
@@ -74,7 +76,7 @@ too long).")
 			     (concat (seq-subseq name 0 ytel-author-name-reserved-space)
 				     "..."))))
     (propertize formatted-string 'face 'ytel-channel-name-face)))
-  
+
 (ert-deftest ytel--format-author-test ()
   "Test the `format-author' function."
   (should (equal (length (ytel--format-author "channel name"))
