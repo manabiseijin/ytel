@@ -81,15 +81,37 @@ too long).")
   (should (equal (length (ytel--format-author "very very long channel name"))
 		 (+ 3 ytel-author-name-reserved-space))))
 
+(defun ytel--format-video-length (seconds)
+  "Given an amount of seconds, format it nicely to be inserted in the *ytel* buffer"
+  (concat (format-seconds "%.2h" seconds)
+	  ":"
+	  (format-seconds "%.2m" (mod seconds 3600))
+	  ":"
+	  (format-seconds "%.2s" (mod seconds 60))))
+
+(ert-deftest ytel--format-video-test ()
+  "test the `format-video' test."
+  (should (equal (ytel--format-video-length 60)
+		 "00:01:00"))
+  (should (equal (ytel--format-video-length 72)
+		 "00:01:12"))
+  (should (equal (ytel--format-video-length 134)
+		 "00:02:14"))
+  (should (equal (ytel--format-video-length 3600)
+		 "01:00:00"))
+  (should (equal (ytel--format-video-length 5100)
+		 "01:25:00"))
+  (should (equal (ytel--format-video-length 5430)
+		 "01:30:30")))
+
 (defun ytel--insert-video (video)
   "Insert `video' in the current buffer.
 
 The formatting is actually terrible, but this is not final."
   (insert (ytel--format-author (assoc-default 'author video))
 	  " | "
-	  (number-to-string (/ (assoc-default 'lengthSeconds video)
-			       60.0))
-	  "m | "
+	  (ytel--format-video-length (assoc-default 'lengthSeconds video))
+	  " | "
 	  (assoc-default 'title video)))
 
 (defun ytel--draw-buffer ()
