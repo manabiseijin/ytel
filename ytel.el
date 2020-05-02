@@ -10,6 +10,9 @@
 ;; This file is NOT part of GNU Emacs.
 
 ;;; Code:
+(defgroup ytel ()
+  "An Emacs Youtube \"front-end\".")
+
 (defvar ytel-invidious-api-url "https://invidio.us"
   "Url to an invidious instance.")
 
