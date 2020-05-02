@@ -19,6 +19,11 @@
 (defvar ytel-videos '()
   "List of videos currently on display.")
 
+(defvar ytel-author-name-reserved-space 20
+  "Number of characters reserved for the channel's name in the *ytel* buffer.
+Note that there will always 3 extra spaces for eventual dots (for names that are
+too long).")
+
 (defvar ytel-mode-map
   (let ((map (make-sparse-keymap)))
     (suppress-keymap map)
@@ -50,11 +55,37 @@
   (interactive)
   (quit-window))
 
+(defun ytel--format-author (name)
+  "Format a channel name to be inserted in the *ytel* buffer."
+  (let ((n (length name)))
+    (concat (seq-subseq name 0 (min ytel-author-name-reserved-space n))
+	    (when (wholenump (- ytel-author-name-reserved-space n))
+	      (make-string (- ytel-author-name-reserved-space n)
+			   ?\ )))))
+
+(defun ytel--format-author (name)
+  "Format a channel name to be inserted in the *ytel* buffer."
+  (let* ((n (length name))
+	 (extra-chars (- n ytel-author-name-reserved-space)))
+    (if (<= extra-chars 0)
+	(concat name
+		(make-string (abs extra-chars) ?\ )
+		"   ")
+      (concat (seq-subseq name 0 ytel-author-name-reserved-space)
+	      "..."))))
+
+(ert-deftest ytel--format-author-test ()
+  "Test the `format-author' function."
+  (should (equal (length (ytel--format-author "channel name"))
+		 (+ 3 ytel-author-name-reserved-space)))
+  (should (equal (length (ytel--format-author "very very long channel name"))
+		 (+ 3 ytel-author-name-reserved-space))))
+
 (defun ytel--insert-video (video)
   "Insert `video' in the current buffer.
 
 The formatting is actually terrible, but this is not final."
-  (insert (assoc-default 'author video)
+  (insert (ytel--format-author (assoc-default 'author video))
 	  " | "
 	  (number-to-string (/ (assoc-default 'lengthSeconds video)
 			       60.0))
