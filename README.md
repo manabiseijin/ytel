@@ -23,15 +23,15 @@ Once everything is loaded `M-x ytel` creates a new buffer and puts it in `ytel-m
 | q   | `ytel-quit`     |
 | s   | `ytel-search`   |
 
-Pressing `s` will prompt for some search terms and populate the buffer once the results are available. Once this has the important side-effect of updating the buffer-local variable `ytel-vieos` that will then contain an array of all the videos on display. One can access this variable as-is or use the predefined function `ytel-get-current-video` that returns the video at point. Videos returned by `ytel-get-current-video` are pseudo-alists with keys `title`, `secondsLength`, `videoId` and `author`.
+Pressing `s` will prompt for some search terms and populate the buffer once the results are available. Once this has the important side-effect of updating the buffer-local variable `ytel-vieos` that will then contain an array of all the videos on display. One can access this variable as-is or use the predefined function `ytel-get-current-video` that returns the video at point. Videos returned by `ytel-get-current-video` are cl-structures so you can access their fields with the `ytel-video-*` functions.
 
-With this information we can implement a function to stream a video in `mpv` as follows:
+With this information we can implement a function to stream a video in `mpv` (provided you have `youtube-dl` installed) as follows:
 ```elisp
 (defun ytel-watch ()
     "Stream video at point in mpv."
     (interactive)
     (let* ((video (ytel-get-current-video))
-     	   (id    (assoc-default 'videoId video)))
+     	   (id    (ytel-video-id video)))
       (start-process "ytel mpv" nil
 		     "mpv"
 		     (concat "https://www.youtube.com/watch?v=" id))
@@ -58,7 +58,7 @@ Here's a bunch of things that ought to be done someday:
 - [X] make the `ytel` buffer more visually appealing,
 - [ ] add functionality to delete videos from the buffer,
 - [ ] add functionality to add the results of a new search to the buffer, without resetting what's already there,
-- [ ] maybe videos should be represented as a structures (plain alists is very lazy),
+- [X] maybe videos should be represented as a structures (plain alists is very lazy),
 - [ ] calls to the Invidious API are performed synchronously, this might prove to be very stupid.
 
 ## FAQ

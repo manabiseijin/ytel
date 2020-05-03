@@ -9,6 +9,9 @@
 
 ;; This file is NOT part of GNU Emacs.
 
+(require 'cl)
+(require 'json)
+
 ;;; Code:
 (defgroup ytel ()
   "An Emacs Youtube \"front-end\".")
@@ -117,11 +120,11 @@ too long).")
   "Insert `video' in the current buffer.
 
 The formatting is actually terrible, but this is not final."
-  (insert (ytel--format-author (assoc-default 'author video))
+  (insert (ytel--format-author (ytel-video-author video))
 	  " "
-	  (ytel--format-video-length (assoc-default 'lengthSeconds video))
+	  (ytel--format-video-length (ytel-video-length video))
 	  " "
-	  (assoc-default 'title video)))
+	  (ytel-video-title video)))
 
 (defun ytel--draw-buffer ()
   "Draws the ytel buffer i.e. clear everything and write down all videos in
@@ -156,6 +159,13 @@ ytel-videos."
     (ytel-mode)))
 
 ;; Youtube interface stuff below.
+(cl-defstruct ytel-video
+  "Information about a Youtube video."
+  (title  "" :read-only t)
+  (id     0  :read-only t)
+  (author "" :read-only t)
+  (length 0  :read-only t))
+
 (defun ytel--hexify-args (args)
   "Transform a list of conses into a percent-encoded string."
   (cond ((null args)
@@ -199,8 +209,16 @@ zero exit code otherwise the request body is parsed by `json-read' and returned.
 
 (defun ytel--query (string)
   "Query youtube for string."
-  (ytel--API-call "search" `(("q" .      ,string)
-			     ("fields" . ,ytel-invidious-default-query-fields))))
+  (let ((videos (ytel--API-call "search" `(("q" .      ,string)
+					   ("fields" . ,ytel-invidious-default-query-fields)))))
+    (dotimes (i (length videos))
+      (let ((v (aref videos i)))
+	(aset videos i
+	      (make-ytel-video :title  (assoc-default 'title v)
+			       :author (assoc-default 'author v)
+			       :length (assoc-default 'lengthSeconds v)
+			       :id     (assoc-default 'videoId v)))))
+    videos))
 
 (provide 'ytel)
 ;;; yt.el ends here
