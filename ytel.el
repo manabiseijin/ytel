@@ -39,6 +39,7 @@ too long).")
     (define-key map "p" #'previous-line)
     (define-key map "s" #'ytel-search)
     (define-key map "S" #'ytel-search-replace)
+    (define-key map "r" #'ytel-remove-current-video)
     map)
   "Keymap for ytel-mode.")
 
@@ -155,6 +156,14 @@ Redraw the buffer."
   (interactive "sSearch terms: ")
   (setf ytel-videos (ytel--query query))
   (ytel--draw-buffer))
+
+(defun ytel-remove-current-video ()
+  "Remove the currently selected video and redraw the buffer."
+  (interactive)
+  (let ((i (1- (line-number-at-pos))))
+      (setf ytel-videos (vconcat (seq-subseq ytel-videos 0 i)
+				 (seq-subseq ytel-videos (1+ i))))
+      (ytel--draw-buffer t)))
 
 (defun ytel-get-current-video ()
   "Get the currently selected video."

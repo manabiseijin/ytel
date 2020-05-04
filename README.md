@@ -16,13 +16,14 @@ While `ytel` does not depend on any Emacs package it does depend on `curl` so, i
 ## Usage
 Once everything is loaded `M-x ytel` creates a new buffer and puts it in `ytel-mode`. This major mode has just a few bindings (for now):
 
-| key | binding               |
-|-----|-----------------------|
-| n   | `next-line`           |
-| p   | `previous-line`       |
-| q   | `ytel-quit`           |
-| s   | `ytel-search`         |
-| S   | `ytel-search-replace` |
+| key | binding                     |
+|-----|-----------------------------|
+| n   | `next-line`                 |
+| p   | `previous-line`             |
+| q   | `ytel-quit`                 |
+| s   | `ytel-search`               |
+| S   | `ytel-search-replace`       |
+| r   | `ytel-delete-current-video` |
 
 Pressing `s` will prompt for some search terms and populate the buffer once the results are available. Once this has the important side-effect of updating the buffer-local variable `ytel-vieos` that will then contain an array of all the videos on display. One can access this variable as-is or use the predefined function `ytel-get-current-video` that returns the video at point. Videos returned by `ytel-get-current-video` are cl-structures so you can access their fields with the `ytel-video-*` functions.
 
@@ -57,7 +58,7 @@ by relying on the correct external tool.
 ## TODO
 Here's a bunch of things that ought to be done someday:
 - [X] make the `ytel` buffer more visually appealing,
-- [ ] add functionality to delete videos from the buffer,
+- [X] add functionality to delete videos from the buffer,
 - [X] add functionality to add the results of a new search to the buffer, without resetting what's already there,
 - [X] maybe videos should be represented as a structures (plain alists is very lazy),
 - [ ] calls to the Invidious API are performed synchronously, this might prove to be very stupid.
