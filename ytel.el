@@ -1,8 +1,8 @@
-;;; ytel.el --- Query Youtube from Emacs
+;;; ytel.el --- Query Youtube
 
 ;; Author: Gabriele Rastello
 ;; Version: 0.1.0
-;; Keywords: youtube search
+;; Keywords: youtube matching multimedia
 ;; URL: https://github.com/grastello/ytel
 ;; License: GNU General Public License >= 3
 ;; Package-Requires: ((emacs "25.3"))
@@ -20,11 +20,12 @@
 
 ;;; Code:
 
-(require 'cl)
+(require 'cl-lib)
 (require 'json)
 
 (defgroup ytel ()
-  "An Emacs Youtube \"front-end\".")
+  "An Emacs Youtube \"front-end\"."
+  :group 'comm)
 
 (defvar ytel-invidious-api-url "https://invidio.us"
   "Url to an invidious instance.")
