@@ -63,6 +63,9 @@ Here's a bunch of things that ought to be done someday:
 - [X] maybe videos should be represented as a structures (plain alists is very lazy),
 - [ ] calls to the Invidious API are performed synchronously, this might prove to be very stupid.
 
+## Contributing
+Feel free to open an issue or send a pull request. I'm quite new to writing Emacs packages so any help is appreciated.
+
 ## FAQ
 
 #### Why?
