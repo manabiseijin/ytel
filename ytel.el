@@ -1,18 +1,28 @@
 ;;; ytel.el --- Query Youtube from Emacs
 
-;; Version: 0.1.0
 ;; Author: Gabriele Rastello
+;; Version: 0.1.0
 ;; Keywords: youtube search
-;; URL: https://github.com/grastello/yt.el
+;; URL: https://github.com/grastello/ytel
 ;; License: GNU General Public License >= 3
 ;; Package-Requires: ((emacs "25.3"))
 
 ;; This file is NOT part of GNU Emacs.
 
+;;; Commentary:
+
+;; This package provide a major mode to search Youtube videos via an elfeed-like
+;; buffer.  Information about videos displayed in this buffer can be extracted
+;; and manipulated by user-defined functions to do various things such as:
+;; - playing them in some video player
+;; - download them
+;; The limit is the sky.
+
+;;; Code:
+
 (require 'cl)
 (require 'json)
 
-;;; Code:
 (defgroup ytel ()
   "An Emacs Youtube \"front-end\".")
 
@@ -41,7 +51,7 @@ too long).")
     (define-key map "S" #'ytel-search-replace)
     (define-key map "r" #'ytel-remove-current-video)
     map)
-  "Keymap for ytel-mode.")
+  "Keymap for `ytel-mode'.")
 
 (defun ytel-mode ()
   "Major mode for querying youtube and display results.
@@ -71,7 +81,7 @@ too long).")
   "Face used for channel names.")
 
 (defun ytel--format-author (name)
-  "Format a channel name to be inserted in the *ytel* buffer."
+  "Format a channel NAME to be inserted in the *ytel* buffer."
   (let* ((n (length name))
 	 (extra-chars (- n ytel-author-name-reserved-space))
 	 (formatted-string (if (<= extra-chars 0)
@@ -95,7 +105,7 @@ too long).")
   "Face used for the video length.")
 
 (defun ytel--format-video-length (seconds)
-  "Given an amount of seconds, format it nicely to be inserted in the *ytel* buffer"
+  "Given an amount of SECONDS, format it nicely to be inserted in the *ytel* buffer."
   (let ((formatted-string (concat (format-seconds "%.2h" seconds)
 				 ":"
 				 (format-seconds "%.2m" (mod seconds 3600))
@@ -119,7 +129,7 @@ too long).")
 		 "01:30:30")))
 
 (defun ytel--insert-video (video)
-  "Insert `video' in the current buffer.
+  "Insert `VIDEO' in the current buffer.
 
 The formatting is actually terrible, but this is not final."
   (insert (ytel--format-author (ytel-video-author video))
@@ -129,9 +139,9 @@ The formatting is actually terrible, but this is not final."
 	  (ytel-video-title video)))
 
 (defun ytel--draw-buffer (&optional restore-point)
-  "Draws the ytel buffer i.e. clear everything and write down all videos in
-ytel-videos.
-If restore-point is 't then restore the cursor line position."
+  "Draws the ytel buffer i.e.
+clear everything and write down all videos in `ytel-videos'.
+If RESTORE-POINT is 't then restore the cursor line position."
   (let ((inhibit-read-only t)
 	(current-line      (line-number-at-pos)))
     (erase-buffer)
@@ -144,14 +154,14 @@ If restore-point is 't then restore the cursor line position."
       (goto-char (point-min)))))
 
 (defun ytel-search (query)
-  "Searches youtube for `query', appends results to `ytel-videos' and redraw the buffer."
+  "Search youtube for `QUERY', append results to `ytel-videos' and redraw the buffer."
   (interactive "sSearch terms: ")
   (setf ytel-videos (vconcat ytel-videos
 			     (ytel--query query)))
   (ytel--draw-buffer t))
 
 (defun ytel-search-replace (query)
-  "Search youtube for `query' and override `ytel-videos' with the search results.
+  "Search youtube for `QUERY' and override `ytel-videos' with the results.
 Redraw the buffer."
   (interactive "sSearch terms: ")
   (setf ytel-videos (ytel--query query))
@@ -170,6 +180,7 @@ Redraw the buffer."
   (aref ytel-videos (1- (line-number-at-pos))))
 
 (defun ytel-buffer ()
+  "Name for the main ytel buffer."
   (get-buffer-create "*ytel*"))
 
 ;;;###autoload
@@ -189,7 +200,7 @@ Redraw the buffer."
   (length 0  :read-only t))
 
 (defun ytel--hexify-args (args)
-  "Transform a list of conses into a percent-encoded string."
+  "Transform a list ARGS of conses into a percent-encoded string."
   (cond ((null args)
 	 "")
 	((= (length args) 1)
@@ -213,9 +224,9 @@ Redraw the buffer."
 		 "pretty=1&fields=version")))
 
 (defun ytel--API-call (method args)
-  "Perform a call to the ividious API method method passing args.
+  "Perform a call to the ividious API method METHOD passing ARGS.
 
-Curl is used to perform the request. An error is thrown if it exits with a non
+Curl is used to perform the request.  An error is thrown if it exits with a non
 zero exit code otherwise the request body is parsed by `json-read' and returned."
   (with-temp-buffer
     (let ((exit-code (call-process "curl" nil t nil
@@ -225,12 +236,12 @@ zero exit code otherwise the request body is parsed by `json-read' and returned.
 					   "/api/v1/" method
 					   "?" (ytel--hexify-args args)))))
       (unless (= exit-code 0)
-	(error "Curl had problems connecting to Invidious."))
+	(error "Curl had problems connecting to Invidious"))
       (goto-char (point-min))
       (json-read))))
 
 (defun ytel--query (string)
-  "Query youtube for string."
+  "Query youtube for STRING."
   (let ((videos (ytel--API-call "search" `(("q" .      ,string)
 					   ("fields" . ,ytel-invidious-default-query-fields)))))
     (dotimes (i (length videos))
@@ -243,4 +254,5 @@ zero exit code otherwise the request body is parsed by `json-read' and returned.
     videos))
 
 (provide 'ytel)
-;;; yt.el ends here
+
+;;; ytel.el ends here
