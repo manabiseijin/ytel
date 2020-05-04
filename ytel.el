@@ -1,4 +1,4 @@
-;;; ytel.el --- Query Youtube
+;;; ytel.el --- Query Youtube -*- lexical-binding: t; -*-
 
 ;; Author: Gabriele Rastello
 ;; Version: 0.1.0
