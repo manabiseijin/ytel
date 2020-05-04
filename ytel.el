@@ -127,23 +127,27 @@ The formatting is actually terrible, but this is not final."
 	  " "
 	  (ytel-video-title video)))
 
-(defun ytel--draw-buffer ()
+(defun ytel--draw-buffer (&optional restore-point)
   "Draws the ytel buffer i.e. clear everything and write down all videos in
-ytel-videos."
-  (let ((inhibit-read-only t))
+ytel-videos.
+If restore-point is 't then restore the cursor line position."
+  (let ((inhibit-read-only t)
+	(current-line      (line-number-at-pos)))
     (erase-buffer)
     (seq-do #'(lambda (v)
 		(ytel--insert-video v)
 		(insert "\n"))
-	    ytel-videos))
-  (goto-char (point-min)))
+	    ytel-videos)
+    (if restore-point
+	(goto-line current-line)
+      (goto-char (point-min)))))
 
 (defun ytel-search (query)
   "Searches youtube for `query', appends results to `ytel-videos' and redraw the buffer."
   (interactive "sSearch terms: ")
   (setf ytel-videos (vconcat ytel-videos
 			     (ytel--query query)))
-  (ytel--draw-buffer))
+  (ytel--draw-buffer t))
 
 (defun ytel-search-replace (query)
   "Search youtube for `query' and override `ytel-videos' with the search results.
