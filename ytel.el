@@ -38,6 +38,7 @@ too long).")
     (define-key map "n" #'next-line)
     (define-key map "p" #'previous-line)
     (define-key map "s" #'ytel-search)
+    (define-key map "S" #'ytel-search-replace)
     map)
   "Keymap for ytel-mode.")
 
@@ -138,7 +139,15 @@ ytel-videos."
   (goto-char (point-min)))
 
 (defun ytel-search (query)
-  "Searches youtube for `query', updates `ytel-videos' and redraw the buffer."
+  "Searches youtube for `query', appends results to `ytel-videos' and redraw the buffer."
+  (interactive "sSearch terms: ")
+  (setf ytel-videos (vconcat ytel-videos
+			     (ytel--query query)))
+  (ytel--draw-buffer))
+
+(defun ytel-search-replace (query)
+  "Search youtube for `query' and override `ytel-videos' with the search results.
+Redraw the buffer."
   (interactive "sSearch terms: ")
   (setf ytel-videos (ytel--query query))
   (ytel--draw-buffer))
