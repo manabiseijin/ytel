@@ -93,13 +93,6 @@ too long).")
 				     "..."))))
     (propertize formatted-string 'face 'ytel-channel-name-face)))
 
-(ert-deftest ytel--format-author-test ()
-  "Test the `format-author' function."
-  (should (equal (length (ytel--format-author "channel name"))
-		 (+ 3 ytel-author-name-reserved-space)))
-  (should (equal (length (ytel--format-author "very very long channel name"))
-		 (+ 3 ytel-author-name-reserved-space))))
-
 (defface ytel-video-length-face
   '((((class color) (background light)) (:foreground "#aaa"))
     (((class color) (background dark))  (:foreground "#77a")))
@@ -113,21 +106,6 @@ too long).")
 				 ":"
 				 (format-seconds "%.2s" (mod seconds 60)))))
     (propertize formatted-string 'face 'ytel-video-length-face)))
-
-(ert-deftest ytel--format-video-test ()
-  "test the `format-video' test."
-  (should (equal (ytel--format-video-length 60)
-		 "00:01:00"))
-  (should (equal (ytel--format-video-length 72)
-		 "00:01:12"))
-  (should (equal (ytel--format-video-length 134)
-		 "00:02:14"))
-  (should (equal (ytel--format-video-length 3600)
-		 "01:00:00"))
-  (should (equal (ytel--format-video-length 5100)
-		 "01:25:00"))
-  (should (equal (ytel--format-video-length 5430)
-		 "01:30:30")))
 
 (defun ytel--insert-video (video)
   "Insert `VIDEO' in the current buffer.
@@ -214,15 +192,6 @@ Redraw the buffer."
 		 (url-hexify-string (cdar args))
 		 "&"
 		 (ytel--hexify-args (cdr args))))))
-
-(ert-deftest ytel--hexify-args-test ()
-  "Test the `hexify-args' function."
-  (should (equal (ytel--hexify-args '())
-		 ""))
-  (should (equal (ytel--hexify-args '(("pretty" . "1")))
-		 "pretty=1"))
-  (should (equal (ytel--hexify-args '(("pretty" . "1") ("fields" . "version")))
-		 "pretty=1&fields=version")))
 
 (defun ytel--API-call (method args)
   "Perform a call to the ividious API method METHOD passing ARGS.
