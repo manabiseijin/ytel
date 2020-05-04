@@ -150,9 +150,9 @@ If RESTORE-POINT is 't then restore the cursor line position."
 		(ytel--insert-video v)
 		(insert "\n"))
 	    ytel-videos)
-    (if restore-point
-	(goto-line current-line)
-      (goto-char (point-min)))))
+    (goto-char (point-min))
+    (when restore-point
+      	(forward-line (1- current-line)))))
 
 (defun ytel-search (query)
   "Search youtube for `QUERY', append results to `ytel-videos' and redraw the buffer."
