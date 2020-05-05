@@ -25,7 +25,14 @@ Once everything is loaded `M-x ytel` creates a new buffer and puts it in `ytel-m
 | S   | `ytel-search-replace`       |
 | r   | `ytel-delete-current-video` |
 
-Pressing `s` will prompt for some search terms and populate the buffer once the results are available. Once this has the important side-effect of updating the buffer-local variable `ytel-vieos` that will then contain an array of all the videos on display. One can access this variable as-is or use the predefined function `ytel-get-current-video` that returns the video at point. Videos returned by `ytel-get-current-video` are cl-structures so you can access their fields with the `ytel-video-*` functions.
+Pressing `s` will prompt for some search terms and populate the buffer once the results are available. Performing more searches with `s` will add videos to the buffer; videos can be removed by pressing `r` and a "fresh" search can be run with `S`. One can access information about a video via the function `ytel-get-current-video` that returns the video at point. Videos returned by `ytel-get-current-video` are cl-structures so you can access their fields with the `ytel-video-*` functions. Currently videos have four fields:
+
+| field           | description                     |
+|-----------------|---------------------------------|
+| `id`            | the video's id                  |
+| `title`         | the video's title               |
+| `author`        | name of the author of the video |
+| `lengthSeconds` | length of the video in seconds  |
 
 With this information we can implement a function to stream a video in `mpv` (provided you have `youtube-dl` installed) as follows:
 ```elisp
@@ -50,6 +57,7 @@ This is of course just an example. You can similarly implement functions to:
 - open a video in the browser,
 - download a video,
 - download just the audio of a video,
+
 by relying on the correct external tool.
 
 ## Potential problems and potential fixes
