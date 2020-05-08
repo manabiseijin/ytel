@@ -37,6 +37,7 @@
 
 (require 'cl-lib)
 (require 'json)
+(require 'seq)
 
 (defgroup ytel ()
   "An Emacs Youtube \"front-end\"."
