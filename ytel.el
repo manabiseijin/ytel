@@ -187,7 +187,8 @@ Redraw the buffer."
     (ytel-mode)))
 
 ;; Youtube interface stuff below.
-(cl-defstruct ytel-video
+(cl-defstruct (ytel-video (:constructor ytel-video--create)
+			  (:copier nil))
   "Information about a Youtube video."
   (title  "" :read-only t)
   (id     0  :read-only t)
@@ -233,10 +234,10 @@ zero exit code otherwise the request body is parsed by `json-read' and returned.
     (dotimes (i (length videos))
       (let ((v (aref videos i)))
 	(aset videos i
-	      (make-ytel-video :title  (assoc-default 'title v)
-			       :author (assoc-default 'author v)
-			       :length (assoc-default 'lengthSeconds v)
-			       :id     (assoc-default 'videoId v)))))
+	      (ytel-video--create :title  (assoc-default 'title v)
+				  :author (assoc-default 'author v)
+				  :length (assoc-default 'lengthSeconds v)
+				  :id     (assoc-default 'videoId v)))))
     videos))
 
 (provide 'ytel)
