@@ -73,22 +73,13 @@ too long).")
     map)
   "Keymap for `ytel-mode'.")
 
-(defun ytel-mode ()
+(define-derived-mode ytel-mode text-mode
   "Major mode for querying youtube and display results.
 
 \\{ytel-mode-map}"
-  (interactive)
-  (kill-all-local-variables)
-  (use-local-map ytel-mode-map)
-  (setq major-mode       'ytel-mode
-	mode-name        "ytel-mode"
-	truncate-lines   t
-	buffer-read-only t)
+  (setq buffer-read-only t)
   (buffer-disable-undo)
-  (make-local-variable 'ytel-videos)
-  (hl-line-mode)
-
-  (run-mode-hooks 'ytel-mode-hook))
+  (make-local-variable 'ytel-videos))
 
 (defun ytel-quit ()
   "Quit ytel buffer."
