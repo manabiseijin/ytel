@@ -8,7 +8,7 @@
 This project was inspired by [elfeed](https://github.com/skeeto/elfeed/) and [Invidious](https://github.com/omarroth/invidious) (it does indeed use the Invidious APIs).
 
 ## Installation
-This project is on its way to Melpa, but for now you'll have to download the `ytel.el` file in some place that Emacs can reach (i.e. in a directory that's in your `load-path`) and then add `(require 'ytel)` somewhere in your configuration (`init.el` or org-babel or whatever you use).
+This project is on [MELPA](https://melpa.org/): you should be able to `M-x package-install RET ytel`. Another option is to clone this repository under your `load-path`.
 
 ### Dependencies
 While `ytel` does not depend on any Emacs package it does depend on `curl` so, if you happen not to have it, install it through your package manager (meme distros aside it is probably in your repos).
