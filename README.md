@@ -1,5 +1,5 @@
 # ytel
-`ytel` is an experimental Youtube "frontend" for Emacs. It's goal is to allow the user to collect the results of a Youtube search in an elfeed-like buffer and then manipulate them with Emacs Lisp. The gif below shows that `ytel` can be used to play videos in an external player, to learn how to emulate it refer to the [usage](#usage) section below.
+`ytel` is an experimental YouTube "frontend" for Emacs. It's goal is to allow the user to collect the results of a YouTube search in an elfeed-like buffer and then manipulate them with Emacs Lisp. The gif below shows that `ytel` can be used to play videos in an external player, to learn how to emulate it refer to the [usage](#usage) section below.
 
 <p align="center">
   <img src="https://github.com/gRastello/ytel/blob/master/pic/demonstration.gif">
@@ -61,7 +61,7 @@ This is of course just an example. You can similarly implement functions to:
 by relying on the correct external tool.
 
 ## Potential problems and potential fixes
-`ytel` does not use the official Youtube APIs but relies on the [Invidious](https://github.com/omarroth/invidious) APIs (that in turn circumvent Youtube ones). The variable `ytel-invidious-api-url` points to the invidious instance (by default `https://invidio.us`) to use; you might not need to ever touch this, but if [invidio.us](https://invidio.us) goes down keep in mind that you can choose [another instance](https://github.com/omarroth/invidious#invidious-instances). Moreover the default Invidious instance is generally speaking stable, but sometimes your `ytel-search` might hang; in that case `C-g` and retry.
+`ytel` does not use the official YouTube APIs but relies on the [Invidious](https://github.com/omarroth/invidious) APIs (that in turn circumvent YouTube ones). The variable `ytel-invidious-api-url` points to the invidious instance (by default `https://invidio.us`) to use; you might not need to ever touch this, but if [invidio.us](https://invidio.us) goes down keep in mind that you can choose [another instance](https://github.com/omarroth/invidious#invidious-instances). Moreover the default Invidious instance is generally speaking stable, but sometimes your `ytel-search` might hang; in that case `C-g` and retry.
 
 ## TODO
 Here's a bunch of things that ought to be done someday:
@@ -77,9 +77,9 @@ Feel free to open an issue or send a pull request. I'm quite new to writing Emac
 ## FAQ
 
 #### Why?
-One can easily subscribe to Youtube channels via an RSS feed and access it in Emacs via [elfeed](https://github.com/skeeto/elfeed/) but sometimes I want to search Youtube for videos of people I don't necessarily follow (e.g. for searching a tutorial, or music, or wasting some good time) and being able to do that without switching to a browser is nice.
+One can easily subscribe to YouTube channels via an RSS feed and access it in Emacs via [elfeed](https://github.com/skeeto/elfeed/) but sometimes I want to search YouTube for videos of people I don't necessarily follow (e.g. for searching a tutorial, or music, or wasting some good time) and being able to do that without switching to a browser is nice.
 
 #### What about [helm-youtube](https://github.com/maximus12793/helm-youtube) and [ivy-youtube](https://github.com/squiter/ivy-youtube)?
 First of all those packages require you to get a Google API key, while `ytel` uses the [Invidious](https://github.com/omarroth/invidious) APIs that in turn do not use the official Google APIs.
 
-Moreover those packages are designed to select a Youtube search result and play it directly in your browser while `ytel` is really a way to collect search results in an `elfeed`-like buffer and make them accessible to the user via functions such as `ytel-get-current-video` so the user gets to decide what to to with them.
+Moreover those packages are designed to select a YouTube search result and play it directly in your browser while `ytel` is really a way to collect search results in an `elfeed`-like buffer and make them accessible to the user via functions such as `ytel-get-current-video` so the user gets to decide what to to with them.

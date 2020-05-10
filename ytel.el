@@ -1,4 +1,4 @@
-;;; ytel.el --- Query Youtube -*- lexical-binding: t; -*-
+;;; ytel.el --- Query YouTube via Invidious -*- lexical-binding: t; -*-
 
 ;; This file is NOT part of Emacs.
 
@@ -26,12 +26,15 @@
 
 ;;; Commentary:
 
-;; This package provide a major mode to search Youtube videos via an elfeed-like
+;; This package provide a major mode to search YouTube videos via an elfeed-like
 ;; buffer.  Information about videos displayed in this buffer can be extracted
 ;; and manipulated by user-defined functions to do various things such as:
 ;; - playing them in some video player
 ;; - download them
 ;; The limit is the sky.
+;;
+;; ytel works by querying YouTube via the Invidious apis (learn more on that here:
+;; https://github.com/omarroth/invidious).
 
 ;;; Code:
 
@@ -44,7 +47,7 @@
   :group 'comm)
 
 (defvar ytel-invidious-api-url "https://invidio.us"
-  "Url to an invidious instance.")
+  "Url to an Invidious instance.")
 
 (defvar ytel-invidious-default-query-fields "author,lengthSeconds,title,videoId"
   "Default fields of interest for video search.")
@@ -140,9 +143,9 @@ If RESTORE-POINT is 't then restore the cursor line position."
   (let ((inhibit-read-only t)
 	(current-line      (line-number-at-pos)))
     (erase-buffer)
-    (seq-do #'(lambda (v)
-		(ytel--insert-video v)
-		(insert "\n"))
+    (seq-do (lambda (v)
+	      (ytel--insert-video v)
+	      (insert "\n"))
 	    ytel-videos)
     (goto-char (point-min))
     (when restore-point
