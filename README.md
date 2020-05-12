@@ -18,12 +18,12 @@ Once everything is loaded `M-x ytel` creates a new buffer and puts it in `ytel-m
 
 | key | binding                     |
 |-----|-----------------------------|
-| n   | `next-line`                 |
-| p   | `previous-line`             |
-| q   | `ytel-quit`                 |
-| s   | `ytel-search`               |
-| S   | `ytel-search-replace`       |
-| r   | `ytel-delete-current-video` |
+| `n` | `next-line`                 |
+| `p` | `previous-line`             |
+| `q` | `ytel-quit`                 |
+| `s` | `ytel-search`               |
+| `S` | `ytel-search-replace`       |
+| `r` | `ytel-delete-current-video` |
 
 Pressing `s` will prompt for some search terms and populate the buffer once the results are available. Performing more searches with `s` will add videos to the buffer; videos can be removed by pressing `r` and a "fresh" search can be run with `S`. One can access information about a video via the function `ytel-get-current-video` that returns the video at point. Videos returned by `ytel-get-current-video` are cl-structures so you can access their fields with the `ytel-video-*` functions. Currently videos have four fields:
 
