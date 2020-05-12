@@ -23,12 +23,3 @@
 		 "01:25:00"))
   (should (equal (ytel--format-video-length 5430)
 		 "01:30:30")))
-
-(ert-deftest ytel--hexify-args-test ()
-  "Test the `hexify-args' function."
-  (should (equal (ytel--hexify-args '())
-		 ""))
-  (should (equal (ytel--hexify-args '(("pretty" . "1")))
-		 "pretty=1"))
-  (should (equal (ytel--hexify-args '(("pretty" . "1") ("fields" . "version")))
-		 "pretty=1&fields=version")))
