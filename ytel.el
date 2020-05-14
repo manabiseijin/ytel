@@ -55,6 +55,10 @@
 (defvar ytel-videos '()
   "List of videos currently on display.")
 
+(defvar-local ytel-current-page 1)
+
+(defvar-local ytel-search-term "")
+
 (defvar ytel-author-name-reserved-space 20
   "Number of characters reserved for the channel's name in the *ytel* buffer.
 Note that there will always 3 extra spaces for eventual dots (for names that are
@@ -70,13 +74,13 @@ too long).")
     (define-key map "s" #'ytel-search)
     (define-key map "S" #'ytel-search-replace)
     (define-key map "r" #'ytel-remove-current-video)
+    (define-key map ">" #'ytel-search-next-page)
+    (define-key map "<" #'ytel-search-previous-page)
     map)
   "Keymap for `ytel-mode'.")
 
 (define-derived-mode ytel-mode text-mode
-  "Major mode for querying youtube and display results.
-
-\\{ytel-mode-map}"
+  "ytel-mode"
   (setq buffer-read-only t)
   (buffer-disable-undo)
   (make-local-variable 'ytel-videos))
@@ -129,22 +133,25 @@ The formatting is actually terrible, but this is not final."
 
 (defun ytel--draw-buffer (&optional restore-point)
   "Draws the ytel buffer i.e.
-clear everything and write down all videos in `ytel-videos'.
-If RESTORE-POINT is 't then restore the cursor line position."
+    clear everything and write down all videos in `ytel-videos'.
+    If RESTORE-POINT is 't then restore the cursor line position."
   (let ((inhibit-read-only t)
 	(current-line      (line-number-at-pos)))
     (erase-buffer)
+    (set 'header-line-format (concat "Search results for " (propertize ytel-search-term 'face 'ytel-video-published-face) ", page " (number-to-string ytel-current-page)))
     (seq-do (lambda (v)
 	      (ytel--insert-video v)
 	      (insert "\n"))
 	    ytel-videos)
     (goto-char (point-min))
     (when restore-point
-      	(forward-line (1- current-line)))))
+      (forward-line (1- current-line)))))
 
 (defun ytel-search (query)
   "Search youtube for `QUERY', append results to `ytel-videos' and redraw the buffer."
   (interactive "sSearch terms: ")
+  (set 'ytel-current-page 1)
+  (set 'ytel-search-term query)
   (setf ytel-videos (vconcat ytel-videos
 			     (ytel--query query)))
   (ytel--draw-buffer t))
@@ -156,13 +163,28 @@ Redraw the buffer."
   (setf ytel-videos (ytel--query query))
   (ytel--draw-buffer))
 
+(defun ytel-search-next-page ()
+  "Switch to the next page of the previous search. Redraw the buffer."
+  (interactive)
+  (set 'ytel-current-page (+ ytel-current-page 1))
+  (setf ytel-videos (ytel--query ytel-search-term))
+  (ytel--draw-buffer))
+
+(defun ytel-search-previous-page ()
+  "Switch to the next page of the previous search. Redraw the buffer."
+  (interactive)
+  (when (> ytel-current-page 1)
+    (set 'ytel-current-page (- ytel-current-page 1)))
+  (setf ytel-videos (ytel--query ytel-search-term))
+  (ytel--draw-buffer))
+
 (defun ytel-remove-current-video ()
   "Remove the currently selected video and redraw the buffer."
   (interactive)
   (let ((i (1- (line-number-at-pos))))
-      (setf ytel-videos (vconcat (seq-subseq ytel-videos 0 i)
-				 (seq-subseq ytel-videos (1+ i))))
-      (ytel--draw-buffer t)))
+    (setf ytel-videos (vconcat (seq-subseq ytel-videos 0 i)
+			       (seq-subseq ytel-videos (1+ i))))
+    (ytel--draw-buffer t)))
 
 (defun ytel-get-current-video ()
   "Get the currently selected video."
@@ -224,6 +246,7 @@ zero exit code otherwise the request body is parsed by `json-read' and returned.
 (defun ytel--query (string)
   "Query youtube for STRING."
   (let ((videos (ytel--API-call "search" `(("q" .      ,string)
+					   ("page" . ,(number-to-string ytel-current-page))
 					   ("fields" . ,ytel-invidious-default-query-fields)))))
     (dotimes (i (length videos))
       (let ((v (aref videos i)))
