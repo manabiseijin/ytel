@@ -160,6 +160,8 @@ The formatting is actually terrible, but this is not final."
   "Search youtube for `QUERY' and override `ytel-videos' with the results.
 Redraw the buffer."
   (interactive "sSearch terms: ")
+  (set 'ytel-current-page 1)
+  (set 'ytel-search-term query)
   (setf ytel-videos (ytel--query query))
   (ytel--draw-buffer))
 
