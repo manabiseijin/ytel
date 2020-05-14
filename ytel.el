@@ -165,6 +165,7 @@ Redraw the buffer."
   (setf ytel-videos (ytel--query query))
   (ytel--draw-buffer))
 
+
 (defun ytel-search-next-page ()
   "Switch to the next page of the previous search. Redraw the buffer."
   (interactive)
@@ -213,21 +214,6 @@ Redraw the buffer."
   (author "" :read-only t)
   (length 0  :read-only t))
 
-(defun ytel--hexify-args (args)
-  "Transform a list ARGS of conses into a percent-encoded string."
-  (cond ((null args)
-	 "")
-	((= (length args) 1)
-	 (concat (url-hexify-string (caar args))
-		 "="
-		 (url-hexify-string (cdar args))))
-	(t
-	 (concat (url-hexify-string (caar args))
-		 "="
-		 (url-hexify-string (cdar args))
-		 "&"
-		 (ytel--hexify-args (cdr args))))))
-
 (defun ytel--API-call (method args)
   "Perform a call to the ividious API method METHOD passing ARGS.
 
@@ -239,7 +225,7 @@ zero exit code otherwise the request body is parsed by `json-read' and returned.
 				   "-X" "GET"
 				   (concat ytel-invidious-api-url
 					   "/api/v1/" method
-					   "?" (ytel--hexify-args args)))))
+					   "?" (url-build-query-string args)))))
       (unless (= exit-code 0)
 	(error "Curl had problems connecting to Invidious"))
       (goto-char (point-min))
