@@ -233,9 +233,9 @@ zero exit code otherwise the request body is parsed by `json-read' and returned.
 
 (defun ytel--query (string)
   "Query youtube for STRING."
-  (let ((videos (ytel--API-call "search" `(("q" .      ,string)
-					   ("page" . ,(number-to-string ytel-current-page))
-					   ("fields" . ,ytel-invidious-default-query-fields)))))
+  (let ((videos (ytel--API-call "search" `(("q" ,string)
+					   ("page" ,(number-to-string ytel-current-page))
+					   ("fields" ,ytel-invidious-default-query-fields)))))
     (dotimes (i (length videos))
       (let ((v (aref videos i)))
 	(aset videos i
