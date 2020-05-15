@@ -49,7 +49,7 @@
 (defvar ytel-invidious-api-url "https://invidio.us"
   "Url to an Invidious instance.")
 
-(defvar ytel-invidious-default-query-fields "author,lengthSeconds,title,videoId"
+(defvar ytel-invidious-default-query-fields "author,lengthSeconds,title,videoId,authorId"
   "Default fields of interest for video search.")
 
 (defvar ytel-videos '()
@@ -191,10 +191,11 @@ clear everything and write down all videos in `ytel-videos'.
 (cl-defstruct (ytel-video (:constructor ytel-video--create)
 			  (:copier nil))
   "Information about a Youtube video."
-  (title  "" :read-only t)
-  (id     0  :read-only t)
-  (author "" :read-only t)
-  (length 0  :read-only t))
+  (title    "" :read-only t)
+  (id       0  :read-only t)
+  (author   "" :read-only t)
+  (authorId "" :read-only t)
+  (length   0  :read-only t))
 
 (defun ytel--API-call (method args)
   "Perform a call to the ividious API method METHOD passing ARGS.
@@ -221,10 +222,11 @@ zero exit code otherwise the request body is parsed by `json-read' and returned.
     (dotimes (i (length videos))
       (let ((v (aref videos i)))
 	(aset videos i
-	      (ytel-video--create :title  (assoc-default 'title v)
-				  :author (assoc-default 'author v)
-				  :length (assoc-default 'lengthSeconds v)
-				  :id     (assoc-default 'videoId v)))))
+	      (ytel-video--create :title    (assoc-default 'title v)
+				  :author   (assoc-default 'author v)
+				  :authorId (assoc-default 'authorId v)
+				  :length   (assoc-default 'lengthSeconds v)
+				  :id       (assoc-default 'videoId v)))))
     videos))
 
 (provide 'ytel)
