@@ -1,6 +1,7 @@
 # ytel
 `ytel` is an experimental YouTube "frontend" for Emacs. It's goal is to allow the user to collect the results of a YouTube search in an elfeed-like buffer and then manipulate them with Emacs Lisp. The gif below shows that `ytel` can be used to play videos in an external player, to learn how to emulate it refer to the [usage](#usage) section below.
 
+**WARNING.** The following gif represent a previous state of the project and will be updated (sooner or later).
 <p align="center">
   <img src="https://github.com/gRastello/ytel/blob/master/pic/demonstration.gif">
 </p>
@@ -22,10 +23,11 @@ Once everything is loaded `M-x ytel` creates a new buffer and puts it in `ytel-m
 | `p` | `previous-line`             |
 | `q` | `ytel-quit`                 |
 | `s` | `ytel-search`               |
-| `S` | `ytel-search-replace`       |
-| `r` | `ytel-delete-current-video` |
+| `>` | `ytel-search-next-page`     |
+| `<` | `ytel-search-previous-page` |
+|     |                             |
 
-Pressing `s` will prompt for some search terms and populate the buffer once the results are available. Performing more searches with `s` will add videos to the buffer; videos can be removed by pressing `r` and a "fresh" search can be run with `S`. One can access information about a video via the function `ytel-get-current-video` that returns the video at point. Videos returned by `ytel-get-current-video` are cl-structures so you can access their fields with the `ytel-video-*` functions. Currently videos have four fields:
+Pressing `s` will prompt for some search terms and populate the buffer once the results are available. One can access information about a video via the function `ytel-get-current-video` that returns the video at point. Videos returned by `ytel-get-current-video` are cl-structures so you can access their fields with the `ytel-video-*` functions. Currently videos have four fields:
 
 | field           | description                     |
 |-----------------|---------------------------------|
@@ -62,14 +64,6 @@ by relying on the correct external tool.
 
 ## Potential problems and potential fixes
 `ytel` does not use the official YouTube APIs but relies on the [Invidious](https://github.com/omarroth/invidious) APIs (that in turn circumvent YouTube ones). The variable `ytel-invidious-api-url` points to the invidious instance (by default `https://invidio.us`) to use; you might not need to ever touch this, but if [invidio.us](https://invidio.us) goes down keep in mind that you can choose [another instance](https://github.com/omarroth/invidious#invidious-instances). Moreover the default Invidious instance is generally speaking stable, but sometimes your `ytel-search` might hang; in that case `C-g` and retry.
-
-## TODO
-Here's a bunch of things that ought to be done someday:
-- [X] make the `ytel` buffer more visually appealing,
-- [X] add functionality to delete videos from the buffer,
-- [X] add functionality to add the results of a new search to the buffer, without resetting what's already there,
-- [X] maybe videos should be represented as a structures (plain alists is very lazy),
-- [ ] calls to the Invidious API are performed synchronously, this might prove to be very stupid.
 
 ## Contributing
 Feel free to open an issue or send a pull request. I'm quite new to writing Emacs packages so any help is appreciated.
