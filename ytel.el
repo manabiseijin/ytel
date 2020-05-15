@@ -133,7 +133,7 @@ The formatting is actually terrible, but this is not final."
 
 (defun ytel--draw-buffer (&optional restore-point)
   "Draws the ytel buffer i.e.
-    clear everything and write down all videos in `ytel-videos'.
+clear everything and write down all videos in `ytel-videos'.
     If RESTORE-POINT is 't then restore the cursor line position."
   (let ((inhibit-read-only t)
 	(current-line      (line-number-at-pos)))
@@ -167,14 +167,14 @@ Redraw the buffer."
 
 
 (defun ytel-search-next-page ()
-  "Switch to the next page of the previous search. Redraw the buffer."
+  "Switch to the next page of the previous search.  Redraw the buffer."
   (interactive)
   (set 'ytel-current-page (+ ytel-current-page 1))
   (setf ytel-videos (ytel--query ytel-search-term))
   (ytel--draw-buffer))
 
 (defun ytel-search-previous-page ()
-  "Switch to the next page of the previous search. Redraw the buffer."
+  "Switch to the next page of the previous search.  Redraw the buffer."
   (interactive)
   (when (> ytel-current-page 1)
     (set 'ytel-current-page (- ytel-current-page 1)))
