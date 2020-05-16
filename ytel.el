@@ -49,11 +49,15 @@
 (defvar ytel-invidious-api-url "https://invidio.us"
   "Url to an Invidious instance.")
 
-(defvar ytel-invidious-default-query-fields "author,lengthSeconds,title,videoId,authorId"
+(defvar ytel-invidious-default-query-fields "author,lengthSeconds,title,videoId,authorId,viewCount,published"
   "Default fields of interest for video search.")
 
 (defvar ytel-videos '()
   "List of videos currently on display.")
+
+(defvar ytel-published-date-time-string "%Y-%m-%d"
+  "Time-string used to render the published date of the video. See 'format-time-string'
+for information on how to edit this variable.")
 
 (defvar-local ytel-current-page 1)
 
@@ -63,6 +67,31 @@
   "Number of characters reserved for the channel's name in the *ytel* buffer.
 Note that there will always 3 extra spaces for eventual dots (for names that are
 too long).")
+
+(defvar ytel-title-video-reserved-space 100
+  "Number of characters reserved for the video title in the *ytel* buffer.
+Note that there will always 3 extra spaces for eventual dots (for names that are
+too long).")
+
+(defface ytel-video-published-face
+  '((((class color) (background light)) (:foreground "#a0a"))
+    (((class color) (background dark))  (:foreground "#7a7")))
+  "Face used for the video published date.")
+
+(defface ytel-channel-name-face
+  '((((class color) (background light)) (:foreground "#aa0"))
+    (((class color) (background dark))  (:foreground "#ff0")))
+  "Face used for channel names.")
+
+(defface ytel-video-length-face
+  '((((class color) (background light)) (:foreground "#aaa"))
+    (((class color) (background dark))  (:foreground "#77a")))
+  "Face used for the video length.")
+
+(defface ytel-video-view-face
+  '((((class color) (background light)) (:foreground "#00a"))
+    (((class color) (background dark))  (:foreground "#aa7")))
+  "Face used for the video views.")
 
 (defvar ytel-mode-map
   (let ((map (make-sparse-keymap)))
@@ -78,7 +107,8 @@ too long).")
   "Keymap for `ytel-mode'.")
 
 (define-derived-mode ytel-mode text-mode
-  "ytel-mode"
+  "Major mode for querying youtube and display results.
+\\{ytel-mode-map}"
   (setq buffer-read-only t)
   (buffer-disable-undo)
   (make-local-variable 'ytel-videos))
@@ -87,11 +117,6 @@ too long).")
   "Quit ytel buffer."
   (interactive)
   (quit-window))
-
-(defface ytel-channel-name-face
-  '((((class color) (background light)) (:foreground "#aa0"))
-    (((class color) (background dark))  (:foreground "#ff0")))
-  "Face used for channel names.")
 
 (defun ytel--format-author (name)
   "Format a channel NAME to be inserted in the *ytel* buffer."
@@ -105,10 +130,17 @@ too long).")
 				     "..."))))
     (propertize formatted-string 'face 'ytel-channel-name-face)))
 
-(defface ytel-video-length-face
-  '((((class color) (background light)) (:foreground "#aaa"))
-    (((class color) (background dark))  (:foreground "#77a")))
-  "Face used for the video length.")
+(defun ytel--format-title (title)
+  "Format a video TITLE to be inserted in the *ytel* buffer."
+  (let* ((n (length title))
+	 (extra-chars (- n ytel-title-video-reserved-space))
+	 (formatted-string (if (<= extra-chars 0)
+			       (concat title
+				       (make-string (abs extra-chars) ?\ )
+				       "   ")
+			     (concat (seq-subseq title 0 ytel-title-video-reserved-space)
+				     "..."))))
+    formatted-string))
 
 (defun ytel--format-video-length (seconds)
   "Given an amount of SECONDS, format it nicely to be inserted in the *ytel* buffer."
@@ -119,19 +151,27 @@ too long).")
 				  (format-seconds "%.2s" (mod seconds 60)))))
     (propertize formatted-string 'face 'ytel-video-length-face)))
 
-(defun ytel--insert-video (video)
-  "Insert `VIDEO' in the current buffer.
+(defun ytel--format-video-views (views)
+  (propertize (concat "[views:" (number-to-string views) "]") 'face 'ytel-video-view-face))
 
-The formatting is actually terrible, but this is not final."
-  (insert (ytel--format-author (ytel-video-author video))
+(defun ytel--format-video-published (pub)
+  (propertize (format-time-string ytel-published-date-time-string (seconds-to-time pub)) 'face 'ytel-video-published-face))
+
+(defun ytel--insert-video (video)
+  "Insert `VIDEO' in the current buffer."
+  (insert (ytel--format-video-published (ytel-video-published video))
+	  " "
+	  (ytel--format-author (ytel-video-author video))
 	  " "
 	  (ytel--format-video-length (ytel-video-length video))
 	  " "
-	  (ytel-video-title video)))
+	  (ytel--format-title (ytel-video-title video))
+	  " "
+	  (ytel--format-video-views (ytel-video-views video))))
 
 (defun ytel--draw-buffer (&optional restore-point)
   "Draws the ytel buffer i.e.
-clear everything and write down all videos in `ytel-videos'.
+    clear everything and write down all videos in `ytel-videos'.
     If RESTORE-POINT is 't then restore the cursor line position."
   (let ((inhibit-read-only t)
 	(current-line      (line-number-at-pos)))
@@ -149,17 +189,19 @@ clear everything and write down all videos in `ytel-videos'.
       (forward-line (1- current-line)))))
 
 (defun ytel-search (query)
-  "Search youtube for `QUERY' and redraw the buffer."
+  "Search youtube for `QUERY', and redraw the buffer."
   (interactive "sSearch terms: ")
   (setf ytel-current-page 1)
   (setf ytel-search-term query)
-  (setf ytel-videos (ytel--query query))
+  (setf ytel-videos (vconcat ytel-videos
+			     (ytel--query query)))
   (ytel--draw-buffer t))
+
 
 (defun ytel-search-next-page ()
   "Switch to the next page of the previous search.  Redraw the buffer."
   (interactive)
-  (setf ytel-current-page (+ ytel-current-page 1))
+  (set 'ytel-current-page (+ ytel-current-page 1))
   (setf ytel-videos (ytel--query ytel-search-term))
   (ytel--draw-buffer))
 
@@ -167,7 +209,7 @@ clear everything and write down all videos in `ytel-videos'.
   "Switch to the next page of the previous search.  Redraw the buffer."
   (interactive)
   (when (> ytel-current-page 1)
-    (setf ytel-current-page (- ytel-current-page 1))
+    (set 'ytel-current-page (- ytel-current-page 1))
     (setf ytel-videos (ytel--query ytel-search-term))
     (ytel--draw-buffer)))
 
@@ -185,20 +227,24 @@ clear everything and write down all videos in `ytel-videos'.
   (interactive)
   (switch-to-buffer (ytel-buffer))
   (unless (eq major-mode 'ytel-mode)
-    (ytel-mode)))
+    (ytel-mode))
+  (when (seq-empty-p ytel-search-term)
+    (setq header-line-format "Press s to start a new search.")))
 
 ;; Youtube interface stuff below.
 (cl-defstruct (ytel-video (:constructor ytel-video--create)
 			  (:copier nil))
   "Information about a Youtube video."
-  (title    "" :read-only t)
-  (id       0  :read-only t)
-  (author   "" :read-only t)
+  (title  "" :read-only t)
+  (id     0  :read-only t)
+  (author "" :read-only t)
   (authorId "" :read-only t)
-  (length   0  :read-only t))
+  (length 0  :read-only t)
+  (views 0   :read-only t)
+  (published 0 :read-only t))
 
 (defun ytel--API-call (method args)
-  "Perform a call to the ividious API method METHOD passing ARGS.
+  "Perform a call to the invidious API method METHOD passing ARGS.
 
 Curl is used to perform the request.  An error is thrown if it exits with a non
 zero exit code otherwise the request body is parsed by `json-read' and returned."
@@ -222,11 +268,13 @@ zero exit code otherwise the request body is parsed by `json-read' and returned.
     (dotimes (i (length videos))
       (let ((v (aref videos i)))
 	(aset videos i
-	      (ytel-video--create :title    (assoc-default 'title v)
-				  :author   (assoc-default 'author v)
+	      (ytel-video--create :title  (assoc-default 'title v)
+				  :author (assoc-default 'author v)
 				  :authorId (assoc-default 'authorId v)
-				  :length   (assoc-default 'lengthSeconds v)
-				  :id       (assoc-default 'videoId v)))))
+				  :length (assoc-default 'lengthSeconds v)
+				  :id     (assoc-default 'videoId v)
+				  :views (assoc-default 'viewCount v)
+				  :published (assoc-default 'published v)))))
     videos))
 
 (provide 'ytel)
