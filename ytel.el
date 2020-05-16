@@ -56,12 +56,14 @@
   "List of videos currently on display.")
 
 (defvar ytel-published-date-time-string "%Y-%m-%d"
-  "Time-string used to render the published date of the video. See 'format-time-string'
-for information on how to edit this variable.")
+  "Time-string used to render the published date of the video.
+See 'format-time-string' for information on how to edit this variable.")
 
-(defvar-local ytel-current-page 1)
+(defvar-local ytel-current-page 1
+  "Current page of the current `ytel-search-term'")
 
-(defvar-local ytel-search-term "")
+(defvar-local ytel-search-term ""
+  "Current search string as used by `ytel-search'")
 
 (defvar ytel-author-name-reserved-space 20
   "Number of characters reserved for the channel's name in the *ytel* buffer.
@@ -152,10 +154,12 @@ too long).")
     (propertize formatted-string 'face 'ytel-video-length-face)))
 
 (defun ytel--format-video-views (views)
+  "Format video VIEWS to be inserted in the *ytel* buffer."
   (propertize (concat "[views:" (number-to-string views) "]") 'face 'ytel-video-view-face))
 
-(defun ytel--format-video-published (pub)
-  (propertize (format-time-string ytel-published-date-time-string (seconds-to-time pub)) 'face 'ytel-video-published-face))
+(defun ytel--format-video-published (published)
+  "Format video PUBLISHED date to be inserted in the *ytel* buffer."
+  (propertize (format-time-string ytel-published-date-time-string (seconds-to-time published)) 'face 'ytel-video-published-face))
 
 (defun ytel--insert-video (video)
   "Insert `VIDEO' in the current buffer."
@@ -171,7 +175,7 @@ too long).")
 
 (defun ytel--draw-buffer (&optional restore-point)
   "Draws the ytel buffer i.e.
-    clear everything and write down all videos in `ytel-videos'.
+clear everything and write down all videos in `ytel-videos'.
     If RESTORE-POINT is 't then restore the cursor line position."
   (let ((inhibit-read-only t)
 	(current-line      (line-number-at-pos)))
@@ -193,15 +197,14 @@ too long).")
   (interactive "sSearch terms: ")
   (setf ytel-current-page 1)
   (setf ytel-search-term query)
-  (setf ytel-videos (vconcat ytel-videos
-			     (ytel--query query)))
+  (setf ytel-videos (ytel--query query))
   (ytel--draw-buffer t))
 
 
 (defun ytel-search-next-page ()
   "Switch to the next page of the previous search.  Redraw the buffer."
   (interactive)
-  (set 'ytel-current-page (+ ytel-current-page 1))
+  (setf ytel-current-page (+ ytel-current-page 1))
   (setf ytel-videos (ytel--query ytel-search-term))
   (ytel--draw-buffer))
 
@@ -209,7 +212,7 @@ too long).")
   "Switch to the next page of the previous search.  Redraw the buffer."
   (interactive)
   (when (> ytel-current-page 1)
-    (set 'ytel-current-page (- ytel-current-page 1))
+    (setf ytel-current-page (- ytel-current-page 1))
     (setf ytel-videos (ytel--query ytel-search-term))
     (ytel--draw-buffer)))
 
@@ -235,12 +238,12 @@ too long).")
 (cl-defstruct (ytel-video (:constructor ytel-video--create)
 			  (:copier nil))
   "Information about a Youtube video."
-  (title  "" :read-only t)
-  (id     0  :read-only t)
-  (author "" :read-only t)
-  (authorId "" :read-only t)
-  (length 0  :read-only t)
-  (views 0   :read-only t)
+  (title     "" :read-only t)
+  (id        0  :read-only t)
+  (author    "" :read-only t)
+  (authorId  "" :read-only t)
+  (length    0  :read-only t)
+  (views     0  :read-only t)
   (published 0 :read-only t))
 
 (defun ytel--API-call (method args)
@@ -268,12 +271,12 @@ zero exit code otherwise the request body is parsed by `json-read' and returned.
     (dotimes (i (length videos))
       (let ((v (aref videos i)))
 	(aset videos i
-	      (ytel-video--create :title  (assoc-default 'title v)
-				  :author (assoc-default 'author v)
-				  :authorId (assoc-default 'authorId v)
-				  :length (assoc-default 'lengthSeconds v)
-				  :id     (assoc-default 'videoId v)
-				  :views (assoc-default 'viewCount v)
+	      (ytel-video--create :title     (assoc-default 'title v)
+				  :author    (assoc-default 'author v)
+				  :authorId  (assoc-default 'authorId v)
+				  :length    (assoc-default 'lengthSeconds v)
+				  :id        (assoc-default 'videoId v)
+				  :views     (assoc-default 'viewCount v)
 				  :published (assoc-default 'published v)))))
     videos))
 
