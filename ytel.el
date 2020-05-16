@@ -57,7 +57,7 @@
 
 (defvar ytel-published-date-time-string "%Y-%m-%d"
   "Time-string used to render the published date of the video.
-See 'format-time-string' for information on how to edit this variable.")
+See `format-time-string' for information on how to edit this variable.")
 
 (defvar-local ytel-current-page 1
   "Current page of the current `ytel-search-term'")
@@ -199,7 +199,6 @@ clear everything and write down all videos in `ytel-videos'.
   (setf ytel-search-term query)
   (setf ytel-videos (ytel--query query))
   (ytel--draw-buffer t))
-
 
 (defun ytel-search-next-page ()
   "Switch to the next page of the previous search.  Redraw the buffer."
