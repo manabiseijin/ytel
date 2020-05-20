@@ -173,10 +173,8 @@ too long).")
 	  " "
 	  (ytel--format-video-views (ytel-video-views video))))
 
-(defun ytel--draw-buffer (&optional restore-point)
-  "Draws the ytel buffer i.e.
-clear everything and write down all videos in `ytel-videos'.
-    If RESTORE-POINT is 't then restore the cursor line position."
+(defun ytel--draw-buffer ()
+  "Draws the ytel buffer i.e. clear everything and write down all videos in `ytel-videos'."
   (let ((inhibit-read-only t)
 	(current-line      (line-number-at-pos)))
     (erase-buffer)
@@ -188,9 +186,7 @@ clear everything and write down all videos in `ytel-videos'.
 	      (ytel--insert-video v)
 	      (insert "\n"))
 	    ytel-videos)
-    (goto-char (point-min))
-    (when restore-point
-      (forward-line (1- current-line)))))
+    (goto-char (point-min))))
 
 (defun ytel-search (query)
   "Search youtube for `QUERY', and redraw the buffer."
@@ -198,7 +194,7 @@ clear everything and write down all videos in `ytel-videos'.
   (setf ytel-current-page 1)
   (setf ytel-search-term query)
   (setf ytel-videos (ytel--query query ytel-current-page))
-  (ytel--draw-buffer t))
+  (ytel--draw-buffer))
 
 (defun ytel-search-next-page ()
   "Switch to the next page of the current search.  Redraw the buffer."
