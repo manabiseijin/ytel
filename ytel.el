@@ -197,22 +197,24 @@ clear everything and write down all videos in `ytel-videos'.
   (interactive "sSearch terms: ")
   (setf ytel-current-page 1)
   (setf ytel-search-term query)
-  (setf ytel-videos (ytel--query query))
+  (setf ytel-videos (ytel--query query ytel-current-page))
   (ytel--draw-buffer t))
 
 (defun ytel-search-next-page ()
-  "Switch to the next page of the previous search.  Redraw the buffer."
+  "Switch to the next page of the current search.  Redraw the buffer."
   (interactive)
-  (setf ytel-current-page (+ ytel-current-page 1))
-  (setf ytel-videos (ytel--query ytel-search-term))
+  (setf ytel-videos (ytel--query ytel-search-term
+				 (1+ ytel-current-page)))
+  (setf ytel-current-page (1+ ytel-current-page))
   (ytel--draw-buffer))
 
 (defun ytel-search-previous-page ()
-  "Switch to the next page of the previous search.  Redraw the buffer."
+  "Switch to the previous page of the current search.  Redraw the buffer."
   (interactive)
   (when (> ytel-current-page 1)
-    (setf ytel-current-page (- ytel-current-page 1))
-    (setf ytel-videos (ytel--query ytel-search-term))
+    (setf ytel-videos (ytel--query ytel-search-term
+				   (1- ytel-current-page)))
+    (setf ytel-current-page (1- ytel-current-page))
     (ytel--draw-buffer)))
 
 (defun ytel-get-current-video ()
@@ -262,10 +264,10 @@ zero exit code otherwise the request body is parsed by `json-read' and returned.
       (goto-char (point-min))
       (json-read))))
 
-(defun ytel--query (string)
-  "Query youtube for STRING."
+(defun ytel--query (string n)
+  "Query youtube for STRING, return the Nth page of results."
   (let ((videos (ytel--API-call "search" `(("q" ,string)
-					   ("page" ,(number-to-string ytel-current-page))
+					   ("page" n)
 					   ("fields" ,ytel-invidious-default-query-fields)))))
     (dotimes (i (length videos))
       (let ((v (aref videos i)))
