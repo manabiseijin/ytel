@@ -109,8 +109,7 @@ too long).")
   "Keymap for `ytel-mode'.")
 
 (define-derived-mode ytel-mode text-mode
-  "Major mode for querying youtube and display results.
-\\{ytel-mode-map}"
+  "ytel-mode"
   (setq buffer-read-only t)
   (buffer-disable-undo)
   (make-local-variable 'ytel-videos))
@@ -122,7 +121,7 @@ too long).")
 
 (defun ytel--format-author (name)
   "Format a channel NAME to be inserted in the *ytel* buffer."
-  (let* ((n (length name))
+  (let* ((n (string-width name))
 	 (extra-chars (- n ytel-author-name-reserved-space))
 	 (formatted-string (if (<= extra-chars 0)
 			       (concat name
@@ -134,7 +133,7 @@ too long).")
 
 (defun ytel--format-title (title)
   "Format a video TITLE to be inserted in the *ytel* buffer."
-  (let* ((n (length title))
+  (let* ((n (string-width title))
 	 (extra-chars (- n ytel-title-video-reserved-space))
 	 (formatted-string (if (<= extra-chars 0)
 			       (concat title
@@ -159,7 +158,8 @@ too long).")
 
 (defun ytel--format-video-published (published)
   "Format video PUBLISHED date to be inserted in the *ytel* buffer."
-  (propertize (format-time-string ytel-published-date-time-string (seconds-to-time published)) 'face 'ytel-video-published-face))
+  (propertize (format-time-string ytel-published-date-time-string (seconds-to-time published))
+	      'face 'ytel-video-published-face))
 
 (defun ytel--insert-video (video)
   "Insert `VIDEO' in the current buffer."
