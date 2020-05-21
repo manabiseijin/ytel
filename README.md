@@ -1,7 +1,6 @@
 # ytel
 `ytel` is an experimental YouTube "frontend" for Emacs. It's goal is to allow the user to collect the results of a YouTube search in an elfeed-like buffer and then manipulate them with Emacs Lisp. The gif below shows that `ytel` can be used to play videos in an external player, to learn how to emulate it refer to the [usage](#usage) section below.
 
-**WARNING.** The following gif represent a previous state of the project and will be updated (sooner or later).
 <p align="center">
   <img src="https://github.com/gRastello/ytel/blob/master/pic/demonstration.gif">
 </p>
@@ -17,25 +16,26 @@ While `ytel` does not depend on any Emacs package it does depend on `curl` so, i
 ## Usage
 Once everything is loaded `M-x ytel` creates a new buffer and puts it in `ytel-mode`. This major mode has just a few bindings (for now):
 
-| key | binding                     |
-|-----|-----------------------------|
-| `n` | `next-line`                 |
-| `p` | `previous-line`             |
-| `q` | `ytel-quit`                 |
-| `s` | `ytel-search`               |
-| `>` | `ytel-search-next-page`     |
-| `<` | `ytel-search-previous-page` |
-|     |                             |
+| key          | binding                     |
+|--------------|-----------------------------|
+| <key>n</key> | `next-line`                 |
+| <key>p</key> | `previous-line`             |
+| <key>q</key> | `ytel-quit`                 |
+| <key>s</key> | `ytel-search`               |
+| <key>></key> | `ytel-search-next-page`     |
+| <key><</key> | `ytel-search-previous-page` |
 
 Pressing `s` will prompt for some search terms and populate the buffer once the results are available. One can access information about a video via the function `ytel-get-current-video` that returns the video at point. Videos returned by `ytel-get-current-video` are cl-structures so you can access their fields with the `ytel-video-*` functions. Currently videos have four fields:
 
-| field           | description                              |
-|-----------------|------------------------------------------|
-| `id`            | the video's id                           |
-| `title`         | the video's title                        |
-| `author`        | name of the author of the video          |
-| `authorId`      | id of the channel that updated the video |
-| `lengthSeconds` | length of the video in seconds           |
+| field       | description                                |
+|-------------|--------------------------------------------|
+| `id`        | the video's id                             |
+| `title`     | the video's title                          |
+| `author`    | name of the author of the video            |
+| `authorId`  | id of the channel that updated the video   |
+| `length`    | length of the video in seconds             |
+| `views`     | number of views                            |
+| `published` | date of publication (unix-style timestamp) |
 
 With this information we can implement a function to stream a video in `mpv` (provided you have `youtube-dl` installed) as follows:
 ```elisp
