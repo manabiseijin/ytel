@@ -46,6 +46,12 @@
   "An Emacs Youtube \"front-end\"."
   :group 'comm)
 
+(defcustom ytel-sort-criterion 'relevance
+  "Criterion to sort the results of the search query."
+  :type 'symbol
+  :options '(relevance rating upload_date view_count)
+  :group 'ytel)
+
 (defvar ytel-invidious-api-url "https://invidio.us"
   "Url to an Invidious instance.")
 
@@ -263,6 +269,7 @@ zero exit code otherwise the request body is parsed by `json-read' and returned.
 (defun ytel--query (string n)
   "Query youtube for STRING, return the Nth page of results."
   (let ((videos (ytel--API-call "search" `(("q" ,string)
+                                           ("sort_by" ,(symbol-name ytel-sort-criterion))
 					   ("page" n)
 					   ("fields" ,ytel-invidious-default-query-fields)))))
     (dotimes (i (length videos))
