@@ -63,6 +63,9 @@ This is of course just an example. You can similarly implement functions to:
 
 by relying on the correct external tool.
 
+It is also possible to customize the sorting criterion of the results by setting the variable `ytel-sort-criterion` to one of the following symbols `relevance`, `rating`, `upload_date` or `view_count`.
+The default value is `relevance`.
+
 ## Potential problems and potential fixes
 `ytel` does not use the official YouTube APIs but relies on the [Invidious](https://github.com/omarroth/invidious) APIs (that in turn circumvent YouTube ones). The variable `ytel-invidious-api-url` points to the invidious instance (by default `https://invidio.us`) to use; you might not need to ever touch this, but if [invidio.us](https://invidio.us) goes down keep in mind that you can choose [another instance](https://github.com/omarroth/invidious#invidious-instances). Moreover the default Invidious instance is generally speaking stable, but sometimes your `ytel-search` might hang; in that case `C-g` and retry.
 
