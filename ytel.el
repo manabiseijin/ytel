@@ -235,7 +235,7 @@ too long).")
   (unless (eq major-mode 'ytel-mode)
     (ytel-mode))
   (when (seq-empty-p ytel-search-term)
-    (setq header-line-format "Press s to start a new search.")))
+    (call-interactively #'ytel-search)))
 
 ;; Youtube interface stuff below.
 (cl-defstruct (ytel-video (:constructor ytel-video--create)
