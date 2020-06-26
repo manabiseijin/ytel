@@ -42,6 +42,8 @@
 (require 'json)
 (require 'seq)
 
+(declare-function ytel-channel 'ytel-channel)
+
 (defgroup ytel ()
   "An Emacs Youtube \"front-end\"."
   :group 'comm)
@@ -116,6 +118,7 @@ too long).")
     (define-key map "s" #'ytel-search)
     (define-key map ">" #'ytel-search-next-page)
     (define-key map "<" #'ytel-search-previous-page)
+    (define-key map "C" #'ytel-get-channel)
     map)
   "Keymap for `ytel-mode'.")
 
@@ -292,6 +295,13 @@ zero exit code otherwise the request body is parsed by `json-read' and returned.
 				  :views     (assoc-default 'viewCount v)
 				  :published (assoc-default 'published v)))))
     videos))
+
+(defun ytel-get-channel ()
+  (interactive)
+  (let ((author (ytel-video-author (ytel-get-current-video)))
+	(authorId (ytel-video-authorId (ytel-get-current-video))))
+    (require 'ytel-channel)
+    (ytel-channel author authorId)))
 
 (provide 'ytel)
 
