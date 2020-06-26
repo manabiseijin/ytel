@@ -101,6 +101,11 @@ too long).")
     (((class color) (background dark))  (:foreground "#aa7")))
   "Face used for the video views.")
 
+(defface ytel-video-title-face
+  '((((class color) (background light)) (:foreground "#000"))
+    (((class color) (background dark))  (:foreground "#fff")))
+  "Face used for the video title.")
+
 (defvar ytel-mode-map
   (let ((map (make-sparse-keymap)))
     (suppress-keymap map)
@@ -116,7 +121,9 @@ too long).")
 
 (define-derived-mode ytel-mode text-mode
   "ytel-mode"
-  (setq buffer-read-only t)
+  (setq buffer-read-only t
+	major-mode 'ytel-mode
+	mode-name "ytel")
   (buffer-disable-undo)
   (make-local-variable 'ytel-videos))
 
@@ -147,7 +154,7 @@ too long).")
 				       "   ")
 			     (concat (seq-subseq title 0 ytel-title-video-reserved-space)
 				     "..."))))
-    formatted-string))
+    (propertize formatted-string 'face 'ytel-video-title-face)))
 
 (defun ytel--format-video-length (seconds)
   "Given an amount of SECONDS, format it nicely to be inserted in the *ytel* buffer."
@@ -187,7 +194,9 @@ too long).")
     (setf header-line-format (concat "Search results for "
 				     (propertize ytel-search-term 'face 'ytel-video-published-face)
 				     ", page "
-				     (number-to-string ytel-current-page)))
+				     (number-to-string ytel-current-page)
+				     ", sorted by: "
+				     (symbol-name ytel-sort-criterion)))
     (seq-do (lambda (v)
 	      (ytel--insert-video v)
 	      (insert "\n"))
@@ -270,7 +279,7 @@ zero exit code otherwise the request body is parsed by `json-read' and returned.
   "Query youtube for STRING, return the Nth page of results."
   (let ((videos (ytel--API-call "search" `(("q" ,string)
                                            ("sort_by" ,(symbol-name ytel-sort-criterion))
-					   ("page" n)
+					   ("page" ,n)
 					   ("fields" ,ytel-invidious-default-query-fields)))))
     (dotimes (i (length videos))
       (let ((v (aref videos i)))
