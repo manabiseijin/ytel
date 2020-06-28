@@ -54,16 +54,28 @@
   :options '(relevance rating upload_date view_count)
   :group 'ytel)
 
+(defcustom ytel-type-of-results "video"
+  "Set what type of results to get when making a search."
+  :type 'string
+  :options '("video" "playlist" "channel" "all")
+  :group 'ytel)
+
 (defvar ytel-invidious-api-url "https://invidio.us"
   "Url to an Invidious instance.")
 
-(defvar ytel-invidious-default-query-fields "author,lengthSeconds,title,videoId,authorId,viewCount,published"
+(defvar ytel-default-video-query-fields "type,author,lengthSeconds,title,videoId,authorId,viewCount,published"
   "Default fields of interest for video search.")
+
+(defvar ytel-default-channel-query-fields "type,author,authorid,subCount"
+  "Default fields of interest for channel search.")
+
+(defvar ytel-default-playlist-query-fields "type,title,playlistId,author,authorid,videoCount"
+  "Default fields of interest for playlist search.")
 
 (defvar ytel-videos '()
   "List of videos currently on display.")
 
-(defvar ytel-published-date-time-string "%Y-%m-%d"
+(defcustom ytel-published-date-time-string "%Y-%m-%d"
   "Time-string used to render the published date of the video.
 See `format-time-string' for information on how to edit this variable.")
 
@@ -177,6 +189,16 @@ too long).")
   (propertize (format-time-string ytel-published-date-time-string (seconds-to-time published))
 	      'face 'ytel-video-published-face))
 
+(defun ytel--insert-entry (entry)
+  "Insert an entry of the form (TYPE ITEM) according to TYPE."
+  (let ((type (car entry))
+	(item (cdr entry)))
+    (pcase type
+      ("video" (ytel--insert-video item))
+      ("playlist" (ytel--insert-playlist item))
+      ("channel" (ytel--insert-channel item))
+      (_ (error "Invalid entry type: %s" type)))))
+
 (defun ytel--insert-video (video)
   "Insert `VIDEO' in the current buffer."
   (insert (ytel--format-video-published (ytel-video-published video))
@@ -189,10 +211,27 @@ too long).")
 	  " "
 	  (ytel--format-video-views (ytel-video-views video))))
 
+					;TODO: Format playlist and channel entries in buffer
+(defun ytel--insert-playlist (playlist)
+  "Insert `PLAYLIST' in the current buffer."
+  (insert (ytel--format-author (ytel-playlist-author playlist))
+	  " "
+	  (ytel-playlist-videoCount playlist)
+	  " "
+	  (ytel--format-title (ytel-playlist-title playlist))))
+
+(defun ytel--insert-channel (channel)
+  "Insert `CHANNEL' in the current buffer."
+  (insert (ytel--format-author (ytel-channel-author channel))
+	  " "
+	  (ytel-channel-subCount channel)
+	  " "
+	  (ytel-channel-videoCount channel)))
+
 (defun ytel--draw-buffer ()
   "Draws the ytel buffer i.e. clear everything and write down all videos in `ytel-videos'."
   (let ((inhibit-read-only t)
-	(current-line      (line-number-at-pos)))
+	(current-line (line-number-at-pos)))
     (erase-buffer)
     (setf header-line-format (concat "Search results for "
 				     (propertize ytel-search-term 'face 'ytel-video-published-face)
@@ -201,7 +240,7 @@ too long).")
 				     ", sorted by: "
 				     (symbol-name ytel-sort-criterion)))
     (seq-do (lambda (v)
-	      (ytel--insert-video v)
+	      (ytel--insert-entry v)
 	      (insert "\n"))
 	    ytel-videos)
     (goto-char (point-min))))
@@ -261,6 +300,24 @@ too long).")
   (views     0  :read-only t)
   (published 0 :read-only t))
 
+;; Maybe type should be part of the struct.
+(cl-defstruct (ytel-channel (:constructor ytel-channel--create)
+			    (:copier nil))
+  "Information about a Youtube channel."
+  (author     "" :read-only t)
+  (authorId   "" :read-only t)
+  (subCount   0  :read-only t)
+  (videoCount 0  :read-only t))
+
+(cl-defstruct (ytel-playlist (:constructor ytel-playlist--create)
+			     (:copier nil))
+  "Information about a Youtube playlist."
+  (title      "" :read-only t)
+  (playlistId 0  :read-only t)
+  (author     "" :read-only t)
+  (authorId   "" :read-only t)
+  (videoCount 0  :read-only t))
+
 (defun ytel--API-call (method args)
   "Perform a call to the invidious API method METHOD passing ARGS.
 
@@ -280,23 +337,46 @@ zero exit code otherwise the request body is parsed by `json-read' and returned.
 
 (defun ytel--query (string n)
   "Query youtube for STRING, return the Nth page of results."
-  (let ((videos (ytel--API-call "search" `(("q" ,string)
-                                           ("sort_by" ,(symbol-name ytel-sort-criterion))
-					   ("page" ,n)
-					   ("fields" ,ytel-invidious-default-query-fields)))))
-    (dotimes (i (length videos))
-      (let ((v (aref videos i)))
-	(aset videos i
-	      (ytel-video--create :title     (assoc-default 'title v)
-				  :author    (assoc-default 'author v)
-				  :authorId  (assoc-default 'authorId v)
-				  :length    (assoc-default 'lengthSeconds v)
-				  :id        (assoc-default 'videoId v)
-				  :views     (assoc-default 'viewCount v)
-				  :published (assoc-default 'published v)))))
-    videos))
+  (let ((results (ytel--API-call "search" `(("q" ,string)
+					    ("sort_by" ,(symbol-name ytel-sort-criterion))
+					    ("type" ,ytel-type-of-results)
+					    ("page" ,n)
+					    ("fields" ,(pcase ytel-type-of-results
+							 ("video" ytel-default-video-query-fields)
+							 ("playlist" ytel-default-playlist-query-fields)
+							 ("channel" ytel-default-channel-query-fields)
+							 ("all" (concat ytel-default-channel-query-fields ;; I mean, it does get the job done... fix later.
+									","
+									ytel-default-playlist-query-fields
+									","
+									ytel-default-video-query-fields))))))))
+    (dotimes (i (length results))
+      (let* ((v (aref results i))
+	     (type (assoc-default 'type v)))
+	(aset results i (cons type
+			      (pcase type ;; More elegant way to do this?
+				("video" (ytel-video--create :title     (assoc-default 'title v)
+							     :author    (assoc-default 'author v)
+							     :authorId  (assoc-default 'authorId v)
+							     :length    (assoc-default 'lengthSeconds v)
+							     :id        (assoc-default 'videoId v)
+							     :views     (assoc-default 'viewCount v)
+							     :published (assoc-default 'published v)))
+				
+				("playlist" (ytel-playlist--create :title      (assoc-default 'title v)
+								   :playlistId (assoc-default 'playlistId v)
+								   :author     (assoc-default 'author v)
+								   :authorId   (assoc-default 'authorId v)
+								   :videoCount (assoc-default 'videoCount v)))
+				
+				("channel" (ytel-channel--create :author     (assoc-default 'author v)
+								 :authorId   (assoc-default 'authorId v)
+								 :subCount   (assoc-default 'subCount v)
+								 :videoCount (assoc-default 'videoCount v))))))))
+    results))
 
 (defun ytel-get-channel ()
+  "Fetch the channel page for the video at point."
   (interactive)
   (let ((author (ytel-video-author (ytel-get-current-video)))
 	(authorId (ytel-video-authorId (ytel-get-current-video))))

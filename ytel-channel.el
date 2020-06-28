@@ -2,13 +2,13 @@
 
 
 (defcustom ytel-channel-sort-criterion "newest"
-  "Sort videos by 'newest', 'oldest', or 'popular', as used by `ytel-channel-search'"
+  "Sort videos by 'newest', 'oldest', or 'popular', as used by `ytel-channel-search'."
   :type 'string
   :options '("newest" "oldest" "popular")
   :group 'ytel-channel)
 
 (defun ytel-channel-mode ()
-  "Mode for displaying ytel-channel-videos
+  "Mode for displaying ytel-channel-videos.
 \\{ytel-channel-mode-map}"
   (interactive)
   (buffer-disable-undo)
@@ -32,7 +32,7 @@
   "Keymap for `ytel-channel-mode'.")
 
 (defun ytel--channel-query (uid n sort)
-  "Query youtube for UID videos, return the Nth page of results."
+  "Query youtube for UID videos, return the Nth page of results, sorted bv SORT."
   (let ((videos (ytel--API-call (concat "channels/videos/" uid)
 				`(("page" ,n)
 				  ("sort_by" ,sort)
