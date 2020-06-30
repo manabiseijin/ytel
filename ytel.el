@@ -60,16 +60,33 @@
   :options '("video" "playlist" "channel" "all")
   :group 'ytel)
 
+(defcustom ytel-show-fancy-icons nil
+  "If t, enable showing fancy icons in the search buffer.")
+
+;; TODO: Try to add support using all-the-icons, or add images instead.
+(defvar ytel-icons '((video ("Video" . "✇"))
+		     (playlist ("Playlist" . "🎞"))
+		     (channel ("Channel" . "📺 ")) ;; Added a space to this icon so everything is aligned.
+		     (length ("" . "⌚:"))
+		     (views ("views" . "👁"))
+		     (subCount ("subscribers" . "🅯"))
+		     (videoCount ("videos" . "▶")))
+  "Icons for displaying items in buffer.")
+
+(defvar ytel--insert-functions '((video . ytel--insert-video)
+				 (playlist . ytel--insert-playlist)
+				 (channel . ytel--insert-channel)))
+
 (defvar ytel-invidious-api-url "https://invidio.us"
   "Url to an Invidious instance.")
 
 (defvar ytel-default-video-query-fields "type,author,lengthSeconds,title,videoId,authorId,viewCount,published"
   "Default fields of interest for video search.")
 
-(defvar ytel-default-channel-query-fields "type,author,authorid,subCount"
+(defvar ytel-default-channel-query-fields "type,author,authorId,subCount,videoCount"
   "Default fields of interest for channel search.")
 
-(defvar ytel-default-playlist-query-fields "type,title,playlistId,author,authorid,videoCount"
+(defvar ytel-default-playlist-query-fields "type,title,playlistId,author,authorId,videoCount"
   "Default fields of interest for playlist search.")
 
 (defvar ytel-videos '()
@@ -92,6 +109,16 @@ too long).")
 
 (defvar ytel-title-video-reserved-space 100
   "Number of characters reserved for the video title in the *ytel* buffer.
+Note that there will always 3 extra spaces for eventual dots (for names that are
+too long).")
+
+(defvar ytel-title-playlist-reserved-space 30
+  "Number of characters reserved for the playlist title in the *ytel* buffer.
+Note that there will always 3 extra spaces for eventual dots (for names that are
+too long).")
+
+(defvar ytel-name-channel-reserved-space 50
+  "Number of characters reserved for the channel name in the *ytel* buffer.
 Note that there will always 3 extra spaces for eventual dots (for names that are
 too long).")
 
@@ -120,6 +147,18 @@ too long).")
     (((class color) (background dark))  (:foreground "#fff")))
   "Face used for the video title.")
 
+(defface ytel-item-videoCount-face
+  '((t :inherit ytel-video-view-face))
+  "Face used for the videoCount of an entry.")
+
+(defface ytel-item-subCount-face
+  '((t :inherit ytel-video-published-face))
+  "Face used for the subCount of an entry.")
+
+(defface ytel-parameter-face
+  '((t :inherit ytel-video-published-face))
+  "Face used for the parameters of the current search.")
+
 (defvar ytel-mode-map
   (let ((map (make-sparse-keymap)))
     (suppress-keymap map)
@@ -130,7 +169,12 @@ too long).")
     (define-key map "s" #'ytel-search)
     (define-key map ">" #'ytel-search-next-page)
     (define-key map "<" #'ytel-search-previous-page)
-    (define-key map "C" #'ytel-get-channel)
+    (define-key map "t" #'ytel-search-type)
+    (define-key map "S" #'ytel-sort-videos)
+    (define-key map "C" #'ytel-show-channels)
+    (define-key map "P" #'ytel-show-playlists)
+    (define-key map "V" #'ytel-show-videos)
+    (define-key map "Y" #'ytel-yank-channel-feed)
     map)
   "Keymap for `ytel-mode'.")
 
@@ -171,9 +215,34 @@ too long).")
 				     "..."))))
     (propertize formatted-string 'face 'ytel-video-title-face)))
 
+(defun ytel--format-playlist-title (title)
+  "Format a playlist TITLE to be inserted in the *ytel* buffer."
+  (let* ((n (string-width title))
+	 (extra-chars (- n ytel-title-playlist-reserved-space))
+	 (formatted-string (if (<= extra-chars 0)
+			       (concat title
+				       (make-string (abs extra-chars) ?\ )
+				       "   ")
+			     (concat (seq-subseq title 0 ytel-title-playlist-reserved-space)
+				     "..."))))
+    (propertize formatted-string 'face 'ytel-video-title-face)))
+
+(defun ytel--format-channel-name (name)
+  "Format a channel NAME to be inserted in the *ytel* buffer."
+  (let* ((n (string-width name))
+	 (extra-chars (- n ytel-name-channel-reserved-space))
+	 (formatted-string (if (<= extra-chars 0)
+			       (concat name
+				       (make-string (abs extra-chars) ?\ )
+				       "   ")
+			     (concat (seq-subseq name 0 ytel-name-channel-reserved-space)
+				     "..."))))
+    (propertize formatted-string 'face 'ytel-channel-name-face)))
+
 (defun ytel--format-video-length (seconds)
   "Given an amount of SECONDS, format it nicely to be inserted in the *ytel* buffer."
-  (let ((formatted-string (concat (format-seconds "%.2h" seconds)
+  (let ((formatted-string (concat (ytel--get-icon 'length)
+				  (format-seconds "%.2h" seconds)
 				  ":"
 				  (format-seconds "%.2m" (mod seconds 3600))
 				  ":"
@@ -182,68 +251,107 @@ too long).")
 
 (defun ytel--format-video-views (views)
   "Format video VIEWS to be inserted in the *ytel* buffer."
-  (propertize (concat "[views:" (number-to-string views) "]") 'face 'ytel-video-view-face))
+  (propertize (format "[%s: %d]" (ytel--get-icon 'views) views) 'face 'ytel-video-view-face))
 
 (defun ytel--format-video-published (published)
   "Format video PUBLISHED date to be inserted in the *ytel* buffer."
   (propertize (format-time-string ytel-published-date-time-string (seconds-to-time published))
 	      'face 'ytel-video-published-face))
 
+(defun ytel--format-videoCount (videoCount)
+  "Format video VIDEOCOUNT to be inserted in the *ytel* buffer."
+  (propertize (format "[%s: %d]" (ytel--get-icon 'videoCount) videoCount) 'face 'ytel-item-videoCount-face))
+
+(defun ytel--format-subCount (subCount)
+  "Format video SUBCOUNT to be inserted in the *ytel* buffer."
+  (propertize (format "%s: %-10d" (ytel--get-icon 'subCount) subCount) 'face 'ytel-item-subCount-face))
+
+(defun ytel--format-type (type)
+  "Insert an icon of TYPE into buffer."
+  (if ytel-show-fancy-icons
+      (propertize (format "%-2s: " (ytel--get-icon type)) 'face 'ytel-video-title-face)
+    (propertize (format "%-10s: " (ytel--get-icon type)) 'face 'ytel-video-title-face)))
+
+(defun ytel--get-icon (item)
+  "Get the icon for ITEM from `ytel-icons'."
+  (let* ((getmarks (car (cdr (assoc item ytel-icons)))))
+    (if ytel-show-fancy-icons
+	(cdr getmarks)
+      (car getmarks))))
+
 (defun ytel--insert-entry (entry)
-  "Insert an entry of the form (TYPE ITEM) according to TYPE."
-  (let ((type (car entry))
-	(item (cdr entry)))
-    (pcase type
-      ("video" (ytel--insert-video item))
-      ("playlist" (ytel--insert-playlist item))
-      ("channel" (ytel--insert-channel item))
-      (_ (error "Invalid entry type: %s" type)))))
+  "Insert an ENTRY of the form according to its type."
+  (let* ((type (if (not (equal ytel-type-of-results "all"))
+		   (intern ytel-type-of-results)
+		 (cond ((ytel-video-p entry) 'video)
+		       ((ytel-playlist-p entry) 'playlist)
+		       ((ytel-channel-p entry) 'channel)
+		       (t (error "Invalid entry type")))))
+	 (func (cdr (assoc type ytel--insert-functions))))
+    (when (equal ytel-type-of-results "all")
+      (insert (ytel--format-type type)))
+    (funcall func entry)))
 
 (defun ytel--insert-video (video)
-  "Insert `VIDEO' in the current buffer."
-  (insert (ytel--format-video-published (ytel-video-published video))
-	  " "
-	  (ytel--format-author (ytel-video-author video))
-	  " "
-	  (ytel--format-video-length (ytel-video-length video))
-	  " "
-	  (ytel--format-title (ytel-video-title video))
-	  " "
-	  (ytel--format-video-views (ytel-video-views video))))
+  "Insert VIDEO in the current buffer."
+  (insert  (ytel--format-video-published (ytel-video-published video))
+	   " "
+	   (ytel--format-author (ytel-video-author video))
+	   " "
+	   (ytel--format-video-length (ytel-video-length video))
+	   " "
+	   (ytel--format-title (ytel-video-title video))
+	   " "
+	   (ytel--format-video-views (ytel-video-views video))))
 
 					;TODO: Format playlist and channel entries in buffer
 (defun ytel--insert-playlist (playlist)
-  "Insert `PLAYLIST' in the current buffer."
-  (insert (ytel--format-author (ytel-playlist-author playlist))
+  "Insert PLAYLIST in the current buffer."
+  (insert (ytel--format-playlist-title (ytel-playlist-title playlist))
 	  " "
-	  (ytel-playlist-videoCount playlist)
+	  (ytel--format-author (ytel-playlist-author playlist))
 	  " "
-	  (ytel--format-title (ytel-playlist-title playlist))))
+	  (ytel--format-videoCount (ytel-playlist-videoCount playlist))))
 
 (defun ytel--insert-channel (channel)
-  "Insert `CHANNEL' in the current buffer."
-  (insert (ytel--format-author (ytel-channel-author channel))
+  "Insert CHANNEL in the current buffer."
+  (insert (ytel--format-channel-name (ytel-channel-author channel))
 	  " "
-	  (ytel-channel-subCount channel)
+	  (ytel--format-subCount (ytel-channel-subCount channel))
 	  " "
-	  (ytel-channel-videoCount channel)))
+	  (ytel--format-videoCount (ytel-channel-videoCount channel))))
 
 (defun ytel--draw-buffer ()
   "Draws the ytel buffer i.e. clear everything and write down all videos in `ytel-videos'."
-  (let ((inhibit-read-only t)
-	(current-line (line-number-at-pos)))
+  (let ((inhibit-read-only t))
     (erase-buffer)
-    (setf header-line-format (concat "Search results for "
-				     (propertize ytel-search-term 'face 'ytel-video-published-face)
+    (setf header-line-format (concat (propertize (capitalize ytel-type-of-results) 'face 'ytel-parameter-face)
+				     " results for "
+				     (propertize ytel-search-term 'face 'ytel-parameter-face)
 				     ", page "
-				     (number-to-string ytel-current-page)
+				     (propertize (number-to-string ytel-current-page) 'face 'ytel-parameter-face)
 				     ", sorted by: "
-				     (symbol-name ytel-sort-criterion)))
+				     (propertize (symbol-name ytel-sort-criterion) 'face 'ytel-parameter-face)))
     (seq-do (lambda (v)
 	      (ytel--insert-entry v)
 	      (insert "\n"))
 	    ytel-videos)
     (goto-char (point-min))))
+
+(defun ytel-enable-fancy-icons ()
+  "Enable fancy icons in the *ytel* buffer, using `ytel-icons'."
+  (interactive)
+  (setf ytel-show-fancy-icons t))
+
+(defun ytel-disable-fancy-icons ()
+  "Disable fancy icons in the *ytel* buffer, using `ytel-icons'."
+  (interactive)
+  (setf ytel-show-fancy-icons nil))
+
+(defun ytel-toggle-fancy-icons ()
+  "Toggle display of fancy-icons in the *ytel* buffer, using `ytel-icons'."
+  (interactive)
+  (setf ytel-show-fancy-icons (not ytel-show-fancy-icons)))
 
 (defun ytel-search (query)
   "Search youtube for `QUERY', and redraw the buffer."
@@ -270,9 +378,69 @@ too long).")
     (setf ytel-current-page (1- ytel-current-page))
     (ytel--draw-buffer)))
 
+(defun ytel-search-type (&optional arg)
+  "Ask for what type of results to display, and search.
+If ARG is given, make a new search."
+  (interactive "P")
+  (when arg
+    (setf ytel-search-term (read-string "Search terms: ")))
+  (setf ytel-type-of-results (completing-read "Show: " (get 'ytel-type-of-results 'custom-options)))
+  (setf ytel-videos (ytel--query ytel-search-term ytel-current-page))
+  (ytel--draw-buffer))
+
+(defun ytel-show-videos (&optional arg)
+  "Show videos for the current search.
+If ARG is given, make a new search."
+  (interactive "P")
+  (when arg
+    (setf ytel-search-term (read-string "Search terms: ")))
+  (setf ytel-type-of-results "video")
+  (setf ytel-videos (ytel--query ytel-search-term ytel-current-page))
+  (ytel--draw-buffer))
+
+(defun ytel-show-channels (&optional arg)
+  "Show channels for the current search.
+If ARG is given, make a new search."
+  (interactive "P")
+  (when arg
+    (setf ytel-search-term (read-string "Search terms: ")))
+  (setf ytel-type-of-results "channel")
+  (setf ytel-videos (ytel--query ytel-search-term ytel-current-page))
+  (ytel--draw-buffer))
+
+(defun ytel-show-playlists (&optional arg)
+  "Show playlists for the current search.
+If ARG is given, make a new search."
+  (interactive "P")
+  (when arg
+    (setf ytel-search-term (read-string "Search terms: ")))
+  (setf ytel-type-of-results "playlist")
+  (setf ytel-videos (ytel--query ytel-search-term ytel-current-page))
+  (ytel--draw-buffer))
+
+(defun ytel-sort-videos ()
+  "Sort videos from the current search from page 1, according to values of `ytel-sort-criterion'."
+  (interactive)
+  (setf ytel-sort-criterion (intern (completing-read "Sort videos by (default value is relevance): " (get 'ytel-sort-criterion 'custom-options))))
+  (setf ytel-current-page 1)
+  (setf ytel-videos (ytel--query ytel-search-term ytel-current-page))
+  (ytel--draw-buffer))
+
 (defun ytel-get-current-video ()
   "Get the currently selected video."
   (aref ytel-videos (1- (line-number-at-pos))))
+
+(defun ytel-yank-channel-feed (&optional arg)
+  "Yank channel's Invidious RSS feed for the current video at point.
+If ARG is given, format it as a Youtube RSS feed."
+  (interactive "P")
+  (let* ((author (ytel-video-author (ytel-get-current-video)))
+         (authorId (ytel-video-authorId (ytel-get-current-video)))
+         (url (if arg
+                  (concat ytel-invidious-api-url "/feed/channel/" authorId)
+		(concat "https://www.youtube.com/feeds/videos.xml?channel_id=" authorId))))
+    (kill-new url)
+    (message "Copied RSS feed for: %s - %s" author url)))
 
 (defun ytel-buffer ()
   "Name for the main ytel buffer."
@@ -313,7 +481,7 @@ too long).")
 			     (:copier nil))
   "Information about a Youtube playlist."
   (title      "" :read-only t)
-  (playlistId 0  :read-only t)
+  (playlistId "" :read-only t)
   (author     "" :read-only t)
   (authorId   "" :read-only t)
   (videoCount 0  :read-only t))
@@ -336,50 +504,49 @@ zero exit code otherwise the request body is parsed by `json-read' and returned.
       (json-read))))
 
 (defun ytel--query (string n)
-  "Query youtube for STRING, return the Nth page of results."
-  (let ((results (ytel--API-call "search" `(("q" ,string)
-					    ("sort_by" ,(symbol-name ytel-sort-criterion))
-					    ("type" ,ytel-type-of-results)
-					    ("page" ,n)
-					    ("fields" ,(pcase ytel-type-of-results
-							 ("video" ytel-default-video-query-fields)
-							 ("playlist" ytel-default-playlist-query-fields)
-							 ("channel" ytel-default-channel-query-fields)
-							 ("all" (concat ytel-default-channel-query-fields ;; I mean, it does get the job done... fix later.
-									","
-									ytel-default-playlist-query-fields
-									","
-									ytel-default-video-query-fields))))))))
-    (dotimes (i (length results))
-      (let* ((v (aref results i))
-	     (type (assoc-default 'type v)))
-	(aset results i (cons type
-			      (pcase type ;; More elegant way to do this?
-				("video" (ytel-video--create :title     (assoc-default 'title v)
-							     :author    (assoc-default 'author v)
-							     :authorId  (assoc-default 'authorId v)
-							     :length    (assoc-default 'lengthSeconds v)
-							     :id        (assoc-default 'videoId v)
-							     :views     (assoc-default 'viewCount v)
-							     :published (assoc-default 'published v)))
-				
-				("playlist" (ytel-playlist--create :title      (assoc-default 'title v)
-								   :playlistId (assoc-default 'playlistId v)
-								   :author     (assoc-default 'author v)
-								   :authorId   (assoc-default 'authorId v)
-								   :videoCount (assoc-default 'videoCount v)))
-				
-				("channel" (ytel-channel--create :author     (assoc-default 'author v)
-								 :authorId   (assoc-default 'authorId v)
-								 :subCount   (assoc-default 'subCount v)
-								 :videoCount (assoc-default 'videoCount v))))))))
-    results))
+"Query youtube for STRING, return the Nth page of results."
+(let ((results (ytel--API-call "search" `(("q" ,string)
+					  ("sort_by" ,(symbol-name ytel-sort-criterion))
+					  ("type" ,ytel-type-of-results)
+					  ("page" ,n)
+					  ("fields" ,(pcase ytel-type-of-results
+						       ("video" ytel-default-video-query-fields)
+						       ("playlist" ytel-default-playlist-query-fields)
+						       ("channel" ytel-default-channel-query-fields)
+						       ("all" (concat ytel-default-channel-query-fields ;; I mean, it does get the job done... fix later.
+								      ","
+								      ytel-default-playlist-query-fields
+								      ","
+								      ytel-default-video-query-fields))))))))
+  (dotimes (i (length results))
+    (let* ((v (aref results i))
+	   (type (assoc-default 'type v)))
+      (aset results i  (pcase type
+			 ("video" (ytel-video--create :title     (assoc-default 'title v)
+						      :author    (assoc-default 'author v)
+						      :authorId  (assoc-default 'authorId v)
+						      :length    (assoc-default 'lengthSeconds v)
+						      :id        (assoc-default 'videoId v)
+						      :views     (assoc-default 'viewCount v)
+						      :published (assoc-default 'published v)))
+			 ("playlist" (ytel-playlist--create :title      (assoc-default 'title v)
+							    :playlistId (assoc-default 'playlistId v)
+							    :author     (assoc-default 'author v)
+							    :authorId   (assoc-default 'authorId v)
+							    :videoCount (assoc-default 'videoCount v)))
+			 ("channel" (ytel-channel--create :author     (assoc-default 'author v)
+							  :authorId   (assoc-default 'authorId v)
+							  :subCount   (assoc-default 'subCount v)
+							  :videoCount (assoc-default 'videoCount v)))))))
+  results))
 
+;; TODO: similar actions for playlists
 (defun ytel-get-channel ()
-  "Fetch the channel page for the video at point."
+  "Fetch the channel page for the item at point."
   (interactive)
-  (let ((author (ytel-video-author (ytel-get-current-video)))
-	(authorId (ytel-video-authorId (ytel-get-current-video))))
+  (let* ((video (ytel-get-current-video))
+	 (author (ytel-video-author video))
+	 (authorId (ytel-video-authorId video)))
     (require 'ytel-channel)
     (ytel-channel author authorId)))
 
