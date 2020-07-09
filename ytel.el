@@ -43,6 +43,8 @@
 (require 'seq)
 
 (declare-function ytel-channel 'ytel-channel)
+(declare-function ytel--get-playlist-videos 'ytel-playlist)
+
 
 (defgroup ytel ()
   "An Emacs Youtube \"front-end\"."
@@ -94,7 +96,8 @@
 
 (defcustom ytel-published-date-time-string "%Y-%m-%d"
   "Time-string used to render the published date of the video.
-See `format-time-string' for information on how to edit this variable.")
+See `format-time-string' for information on how to edit this variable."
+  :type 'string)
 
 (defvar-local ytel-current-page 1
   "Current page of the current `ytel-search-term'")
@@ -175,6 +178,8 @@ too long).")
     (define-key map "P" #'ytel-show-playlists)
     (define-key map "V" #'ytel-show-videos)
     (define-key map "Y" #'ytel-yank-channel-feed)
+    (define-key map "A" #'ytel--open-channel)
+    (define-key map (kbd "RET") #'ytel-open-dwim)
     map)
   "Keymap for `ytel-mode'.")
 
@@ -358,14 +363,14 @@ too long).")
   (interactive "sSearch terms: ")
   (setf ytel-current-page 1)
   (setf ytel-search-term query)
-  (setf ytel-videos (ytel--query query ytel-current-page))
+  (setf ytel-videos (ytel--process-results (ytel--query query ytel-current-page)))
   (ytel--draw-buffer))
 
 (defun ytel-search-next-page ()
   "Switch to the next page of the current search.  Redraw the buffer."
   (interactive)
-  (setf ytel-videos (ytel--query ytel-search-term
-				 (1+ ytel-current-page)))
+  (setf ytel-videos (ytel--process-results (ytel--query ytel-search-term
+							(1+ ytel-current-page))))
   (setf ytel-current-page (1+ ytel-current-page))
   (ytel--draw-buffer))
 
@@ -373,20 +378,20 @@ too long).")
   "Switch to the previous page of the current search.  Redraw the buffer."
   (interactive)
   (when (> ytel-current-page 1)
-    (setf ytel-videos (ytel--query ytel-search-term
-				   (1- ytel-current-page)))
+    (setf ytel-videos (ytel--process-results (ytel--query ytel-search-term
+							  (1- ytel-current-page))))
     (setf ytel-current-page (1- ytel-current-page))
     (ytel--draw-buffer)))
 
-(defun ytel-search-type (&optional arg)
-  "Ask for what type of results to display, and search.
+  (defun ytel-search-type (&optional arg)
+    "Ask for what type of results to display, and search.
 If ARG is given, make a new search."
-  (interactive "P")
-  (when arg
-    (setf ytel-search-term (read-string "Search terms: ")))
-  (setf ytel-type-of-results (completing-read "Show: " (get 'ytel-type-of-results 'custom-options)))
-  (setf ytel-videos (ytel--query ytel-search-term ytel-current-page))
-  (ytel--draw-buffer))
+    (interactive "P")
+    (when arg
+      (setf ytel-search-term (read-string "Search terms: ")))
+    (setf ytel-type-of-results (completing-read "Show: " (get 'ytel-type-of-results 'custom-options)))
+    (setf ytel-videos (ytel--process-results (ytel--query ytel-search-term ytel-current-page)))
+    (ytel--draw-buffer))
 
 (defun ytel-show-videos (&optional arg)
   "Show videos for the current search.
@@ -395,7 +400,7 @@ If ARG is given, make a new search."
   (when arg
     (setf ytel-search-term (read-string "Search terms: ")))
   (setf ytel-type-of-results "video")
-  (setf ytel-videos (ytel--query ytel-search-term ytel-current-page))
+  (setf ytel-videos (ytel--process-results (ytel--query ytel-search-term ytel-current-page)))
   (ytel--draw-buffer))
 
 (defun ytel-show-channels (&optional arg)
@@ -405,7 +410,7 @@ If ARG is given, make a new search."
   (when arg
     (setf ytel-search-term (read-string "Search terms: ")))
   (setf ytel-type-of-results "channel")
-  (setf ytel-videos (ytel--query ytel-search-term ytel-current-page))
+  (setf ytel-videos (ytel--process-results (ytel--query ytel-search-term ytel-current-page)))
   (ytel--draw-buffer))
 
 (defun ytel-show-playlists (&optional arg)
@@ -415,7 +420,7 @@ If ARG is given, make a new search."
   (when arg
     (setf ytel-search-term (read-string "Search terms: ")))
   (setf ytel-type-of-results "playlist")
-  (setf ytel-videos (ytel--query ytel-search-term ytel-current-page))
+  (setf ytel-videos (ytel--process-results (ytel--query ytel-search-term ytel-current-page)))
   (ytel--draw-buffer))
 
 (defun ytel-sort-videos ()
@@ -423,7 +428,7 @@ If ARG is given, make a new search."
   (interactive)
   (setf ytel-sort-criterion (intern (completing-read "Sort videos by (default value is relevance): " (get 'ytel-sort-criterion 'custom-options))))
   (setf ytel-current-page 1)
-  (setf ytel-videos (ytel--query ytel-search-term ytel-current-page))
+  (setf ytel-videos (ytel--process-results (ytel--query ytel-search-term ytel-current-page)))
   (ytel--draw-buffer))
 
 (defun ytel-get-current-video ()
@@ -434,13 +439,41 @@ If ARG is given, make a new search."
   "Yank channel's Invidious RSS feed for the current video at point.
 If ARG is given, format it as a Youtube RSS feed."
   (interactive "P")
-  (let* ((author (ytel-video-author (ytel-get-current-video)))
-         (authorId (ytel-video-authorId (ytel-get-current-video)))
-         (url (if arg
-                  (concat ytel-invidious-api-url "/feed/channel/" authorId)
+  (let* ((entry (ytel-get-current-video))
+	 (author (funcall (ytel--get-author-function entry) entry))
+	 (authorId (funcall (ytel--get-authorId-function entry) entry))
+	 (url (if arg
+		  (concat ytel-invidious-api-url "/feed/channel/" authorId)
 		(concat "https://www.youtube.com/feeds/videos.xml?channel_id=" authorId))))
     (kill-new url)
     (message "Copied RSS feed for: %s - %s" author url)))
+
+(defun ytel--get-entry-type (entry)
+  "Return the type of ENTRY."
+  (if (not (equal ytel-type-of-results "all"))
+      (intern ytel-type-of-results)
+    (cond ((ytel-video-p entry) 'video)
+	  ((ytel-playlist-p entry) 'playlist)
+	  ((ytel-channel-p entry) 'channel)
+	  (t (error "Invalid entry type")))))
+
+(defun ytel--get-author-function (entry)
+  "Get the author for ENTRY."
+  (let* ((type (ytel--get-entry-type entry)))
+    (pcase type
+      ('video #'ytel-video-author)
+      ('playlist #'ytel-playlist-author)
+      ('channel #'ytel-channel-author)
+      (_ (error "Invalid entry type")))))
+
+(defun ytel--get-authorId-function (entry)
+  "Get the author for ENTRY."
+  (let* ((type (ytel--get-entry-type entry)))
+    (pcase type
+      ('video #'ytel-video-authorId)
+      ('playlist #'ytel-playlist-authorId)
+      ('channel #'ytel-channel-authorId)
+      (_ (error "Invalid entry type")))))
 
 (defun ytel-buffer ()
   "Name for the main ytel buffer."
@@ -518,9 +551,13 @@ zero exit code otherwise the request body is parsed by `json-read' and returned.
 								      ytel-default-playlist-query-fields
 								      ","
 								      ytel-default-video-query-fields))))))))
+  results))
+
+(defun ytel--process-results (results &optional type)
+  "Process RESULTS and turn them into objects, is TYPE is not given, get it from RESULTS."
   (dotimes (i (length results))
     (let* ((v (aref results i))
-	   (type (assoc-default 'type v)))
+	   (type (or type (assoc-default 'type v))))
       (aset results i  (pcase type
 			 ("video" (ytel-video--create :title     (assoc-default 'title v)
 						      :author    (assoc-default 'author v)
@@ -538,17 +575,33 @@ zero exit code otherwise the request body is parsed by `json-read' and returned.
 							  :authorId   (assoc-default 'authorId v)
 							  :subCount   (assoc-default 'subCount v)
 							  :videoCount (assoc-default 'videoCount v)))))))
-  results))
+  results)
 
-;; TODO: similar actions for playlists
-(defun ytel-get-channel ()
-  "Fetch the channel page for the item at point."
+(defun ytel-open-dwim ()
+  "Open the entry at point depending on it's type."
   (interactive)
-  (let* ((video (ytel-get-current-video))
-	 (author (ytel-video-author video))
-	 (authorId (ytel-video-authorId video)))
+  (let* ((entry (ytel-get-current-video))
+	 (type (ytel--get-entry-type entry)))
+    (pcase type
+      ('video nil)
+      ('playlist (ytel--open-playlist))
+      ('channel (ytel--open-channel))
+      (_ (error "No action for item at point")))))
+
+(defun ytel--open-channel ()
+  "Fetch the channel page for the entry at point."
+  (interactive)
+  (let* ((entry (ytel-get-current-video))
+	 (author (funcall (ytel--get-author-function entry) entry))
+	 (authorId (funcall (ytel--get-authorId-function entry) entry)))
     (require 'ytel-channel)
     (ytel-channel author authorId)))
+
+(defun ytel--open-playlist ()
+  "Open the contents of the entry at point, if it's a playlist."
+  (interactive)
+  (require 'ytel-playlist)
+  (ytel--get-playlist-videos))
 
 (provide 'ytel)
 
