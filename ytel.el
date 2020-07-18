@@ -219,6 +219,16 @@ too long).")
   (setf ytel-videos (ytel--query ytel-search-term ytel-current-page))
   (ytel--draw-buffer))
 
+(defun ytel-region-search ()
+  "Search youtube for marked region."
+  (interactive )
+  (let* ((query
+	  (buffer-substring-no-properties
+	   (region-beginning)
+	   (region-end))))
+    (ytel)
+    (ytel-search query)))
+
 (defun ytel-search-next-page ()
   "Switch to the next page of the current search.  Redraw the buffer."
   (interactive)
