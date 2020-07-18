@@ -18,6 +18,7 @@
 ;; USA
 
 ;; Author: Gabriele Rastello
+;;      Stefan Huchler
 ;; Version: 0.1.0
 ;; Keywords: youtube matching multimedia
 ;; URL: https://github.com/grastello/ytel
@@ -50,6 +51,12 @@
   "Criterion to sort the results of the search query."
   :type 'symbol
   :options '(relevance rating upload_date view_count)
+  :group 'ytel)
+
+(defcustom ytel-date-criterion 'year
+  "Criterion to date limit the results of the search query."
+  :type 'symbol
+  :options '(hour day week month year)
   :group 'ytel)
 
 (defvar ytel-invidious-api-url "https://invidio.us"
@@ -198,8 +205,18 @@ too long).")
   "Search youtube for `QUERY', and redraw the buffer."
   (interactive "sSearch terms: ")
   (setf ytel-current-page 1)
-  (setf ytel-search-term query)
-  (setf ytel-videos (ytel--query query ytel-current-page))
+  (let* ((query-words (split-string query))
+	 (terms (seq-group-by (lambda (elem)
+				(s-contains-p ":" elem))
+			      query-words)))
+    (setf ytel-search-term
+	  (s-join " " (assoc-default nil terms)))
+    (if-let ((date (seq-find
+		    (lambda (s) (s-starts-with-p "date:" s) )
+		    (assoc-default t terms))))
+	(setf ytel-date-criterion (intern (substring date 5)))
+      (setf ytel-date-criterion 'year)))
+  (setf ytel-videos (ytel--query ytel-search-term ytel-current-page))
   (ytel--draw-buffer))
 
 (defun ytel-search-next-page ()
@@ -269,6 +286,7 @@ zero exit code otherwise the request body is parsed by `json-read' and returned.
 (defun ytel--query (string n)
   "Query youtube for STRING, return the Nth page of results."
   (let ((videos (ytel--API-call "search" `(("q" ,string)
+					   ("date" ,(symbol-name ytel-date-criterion))
                                            ("sort_by" ,(symbol-name ytel-sort-criterion))
 					   ("page" ,n)
 					   ("fields" ,ytel-invidious-default-query-fields)))))
