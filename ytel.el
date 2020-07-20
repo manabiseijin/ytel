@@ -63,21 +63,41 @@
   :group 'ytel)
 
 (defcustom ytel-show-fancy-icons nil
-  "If t, enable showing fancy icons in the search buffer.")
+  "If t, enable showing fancy icons in the search buffer."
+  :type 'boolean
+  :group 'ytel)
 
 ;; TODO: Try to add support using all-the-icons, or add images instead.
-(defvar ytel-icons '((video ("Video" . "✇"))
-		     (playlist ("Playlist" . "🎞"))
-		     (channel ("Channel" . "📺 ")) ;; Added a space to this icon so everything is aligned.
-		     (length ("" . "⌚:"))
-		     (views ("views" . "👁"))
-		     (subCount ("subscribers" . "🅯"))
-		     (videoCount ("videos" . "▶")))
-  "Icons for displaying items in buffer.")
+(defcustom ytel-icons '((video "Video" "✇")
+			(playlist "Playlist" "🎞")
+			(channel "Channel" "📺 ") ;; Added a space to this icon so everything is aligned
+			(length "" "⌚:")
+			(views "views" "👁")
+			(subCount "subscribers" "🅯")
+			(videoCount "videos" "▶"))
+  "Icons for displaying items in buffer.  First string is inserted if `ytel-show-fancy-icons' is disabled."
+  :type '(alist :value-type (group string string))
+  :group 'ytel)
 
 (defvar ytel--insert-functions '((video . ytel--insert-video)
 				 (playlist . ytel--insert-playlist)
 				 (channel . ytel--insert-channel)))
+
+(defvar ytel--default-action-functions '((video . ytel--default-video-action)
+					 (playlist . ytel--default-playlist-action)
+					 (channel . ytel--default-channel-action))
+  "Functions to call on an entry.  To modify an action, set the appropiate variable instead.")
+
+(defvar ytel--default-video-action #'(lambda ()
+				       (message (ytel-video-title (ytel-get-current-video))))
+  "Action to open a video.  By default it just prints the title to the minibuffer.")
+
+(defvar ytel--default-playlist-action #'ytel--open-playlist
+  "Action to open a playlist.")
+
+(defvar ytel--default-channel-action #'ytel--open-channel
+  "Action to open a channel.")
+
 
 (defvar ytel-invidious-api-url "https://invidio.us"
   "Url to an Invidious instance.")
@@ -97,7 +117,8 @@
 (defcustom ytel-published-date-time-string "%Y-%m-%d"
   "Time-string used to render the published date of the video.
 See `format-time-string' for information on how to edit this variable."
-  :type 'string)
+  :type 'string
+  :group 'ytel)
 
 (defvar-local ytel-current-page 1
   "Current page of the current `ytel-search-term'")
@@ -105,25 +126,33 @@ See `format-time-string' for information on how to edit this variable."
 (defvar-local ytel-search-term ""
   "Current search string as used by `ytel-search'")
 
-(defvar ytel-author-name-reserved-space 20
+(defcustom ytel-author-name-reserved-space 20
   "Number of characters reserved for the channel's name in the *ytel* buffer.
 Note that there will always 3 extra spaces for eventual dots (for names that are
-too long).")
+too long)."
+  :type 'integer
+  :group 'ytel)
 
-(defvar ytel-title-video-reserved-space 100
+(defcustom ytel-title-video-reserved-space 100
   "Number of characters reserved for the video title in the *ytel* buffer.
 Note that there will always 3 extra spaces for eventual dots (for names that are
-too long).")
+too long)."
+  :type 'integer
+  :group 'ytel)
 
-(defvar ytel-title-playlist-reserved-space 30
+(defcustom ytel-title-playlist-reserved-space 30
   "Number of characters reserved for the playlist title in the *ytel* buffer.
 Note that there will always 3 extra spaces for eventual dots (for names that are
-too long).")
+too long)."
+  :type 'integer
+  :group 'ytel)
 
-(defvar ytel-name-channel-reserved-space 50
+(defcustom ytel-name-channel-reserved-space 50
   "Number of characters reserved for the channel name in the *ytel* buffer.
 Note that there will always 3 extra spaces for eventual dots (for names that are
-too long).")
+too long)."
+  :type 'integer
+  :group 'ytel)
 
 (defface ytel-video-published-face
   '((((class color) (background light)) (:foreground "#a0a"))
@@ -179,15 +208,15 @@ too long).")
     (define-key map "V" #'ytel-show-videos)
     (define-key map "Y" #'ytel-yank-channel-feed)
     (define-key map "A" #'ytel--open-channel)
-    (define-key map (kbd "RET") #'ytel-open-dwim)
+    (define-key map (kbd "RET") #'ytel-open-entry)
     map)
   "Keymap for `ytel-mode'.")
 
 (define-derived-mode ytel-mode text-mode
   "ytel-mode"
-  (setq buffer-read-only t
-	major-mode 'ytel-mode
-	mode-name "ytel")
+  "A major mode to query Youtube content through Invidious."
+  :group 'ytel
+  (setq buffer-read-only t)
   (buffer-disable-undo)
   (make-local-variable 'ytel-videos))
 
@@ -279,9 +308,9 @@ too long).")
 
 (defun ytel--get-icon (item)
   "Get the icon for ITEM from `ytel-icons'."
-  (let* ((getmarks (car (cdr (assoc item ytel-icons)))))
+  (let* ((getmarks (assoc-default item ytel-icons)))
     (if ytel-show-fancy-icons
-	(cdr getmarks)
+	(second getmarks)
       (car getmarks))))
 
 (defun ytel--insert-entry (entry)
@@ -361,6 +390,7 @@ too long).")
 (defun ytel-search (query)
   "Search youtube for `QUERY', and redraw the buffer."
   (interactive "sSearch terms: ")
+  (switch-to-buffer "*ytel*")
   (setf ytel-current-page 1)
   (setf ytel-search-term query)
   (setf ytel-videos (ytel--process-results (ytel--query query ytel-current-page)))
@@ -383,15 +413,16 @@ too long).")
     (setf ytel-current-page (1- ytel-current-page))
     (ytel--draw-buffer)))
 
-  (defun ytel-search-type (&optional arg)
-    "Ask for what type of results to display, and search.
+(defun ytel-search-type (&optional arg)
+  "Ask for what type of results to display, and search.
 If ARG is given, make a new search."
-    (interactive "P")
-    (when arg
-      (setf ytel-search-term (read-string "Search terms: ")))
-    (setf ytel-type-of-results (completing-read "Show: " (get 'ytel-type-of-results 'custom-options)))
-    (setf ytel-videos (ytel--process-results (ytel--query ytel-search-term ytel-current-page)))
-    (ytel--draw-buffer))
+  (interactive "P")
+  (when arg
+    (setf ytel-search-term (read-string "Search terms: ")))
+  (setf ytel-current-page 1)
+  (setf ytel-type-of-results (completing-read "Show: " (get 'ytel-type-of-results 'custom-options)))
+  (setf ytel-videos (ytel--process-results (ytel--query ytel-search-term ytel-current-page)))
+  (ytel--draw-buffer))
 
 (defun ytel-show-videos (&optional arg)
   "Show videos for the current search.
@@ -399,6 +430,7 @@ If ARG is given, make a new search."
   (interactive "P")
   (when arg
     (setf ytel-search-term (read-string "Search terms: ")))
+  (setf ytel-current-page 1)
   (setf ytel-type-of-results "video")
   (setf ytel-videos (ytel--process-results (ytel--query ytel-search-term ytel-current-page)))
   (ytel--draw-buffer))
@@ -409,6 +441,7 @@ If ARG is given, make a new search."
   (interactive "P")
   (when arg
     (setf ytel-search-term (read-string "Search terms: ")))
+  (setf ytel-current-page 1)
   (setf ytel-type-of-results "channel")
   (setf ytel-videos (ytel--process-results (ytel--query ytel-search-term ytel-current-page)))
   (ytel--draw-buffer))
@@ -419,6 +452,7 @@ If ARG is given, make a new search."
   (interactive "P")
   (when arg
     (setf ytel-search-term (read-string "Search terms: ")))
+  (setf ytel-current-page 1)
   (setf ytel-type-of-results "playlist")
   (setf ytel-videos (ytel--process-results (ytel--query ytel-search-term ytel-current-page)))
   (ytel--draw-buffer))
@@ -577,16 +611,12 @@ zero exit code otherwise the request body is parsed by `json-read' and returned.
 							  :videoCount (assoc-default 'videoCount v)))))))
   results)
 
-(defun ytel-open-dwim ()
+(defun ytel-open-entry ()
   "Open the entry at point depending on it's type."
   (interactive)
   (let* ((entry (ytel-get-current-video))
 	 (type (ytel--get-entry-type entry)))
-    (pcase type
-      ('video nil)
-      ('playlist (ytel--open-playlist))
-      ('channel (ytel--open-channel))
-      (_ (error "No action for item at point")))))
+    (funcall (symbol-value (assoc-default type ytel--default-action-functions)))))
 
 (defun ytel--open-channel ()
   "Fetch the channel page for the entry at point."

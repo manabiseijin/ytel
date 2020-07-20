@@ -14,18 +14,23 @@ This project is on [MELPA](https://melpa.org/): you should be able to `M-x packa
 While `ytel` does not depend on any Emacs package it does depend on `curl` so, if you happen not to have it, install it through your package manager (meme distros aside it is probably in your repos).
 
 ## Usage
-Once everything is loaded `M-x ytel` creates a new buffer and puts it in `ytel-mode`. This major mode has just a few bindings (for now):
+Once everything is loaded `M-x ytel` creates a new buffer and puts it in `ytel-mode`. Some of the ways you can interact with the buffer are shown below.
 
-| key          | binding                     |
-|--------------|-----------------------------|
-| <key>n</key> | `next-line`                 |
-| <key>p</key> | `previous-line`             |
-| <key>q</key> | `ytel-quit`                 |
-| <key>s</key> | `ytel-search`               |
-| <key>></key> | `ytel-search-next-page`     |
-| <key><</key> | `ytel-search-previous-page` |
+| key            | binding                     | description                                           |
+|----------------|-----------------------------|-------------------------------------------------------|
+| <key>n</key>   | `next-line`                 | Move cursor to next line                              |
+| <key>p</key>   | `previous-line`             | Move cursor to previous line                          |
+| <key>q</key>   | `ytel-quit`                 | Bury the `*ytel*` buffer                              |
+| <key>s</key>   | `ytel-search`               | Make a new search                                     |
+| <key>></key>   | `ytel-search-next-page`     | Go to next page                                       |
+| <key><</key>   | `ytel-search-previous-page` | Go to previous page                                   |
+| <key>t</key>   | `ytel-search-type`          | Change the type of results (videos, playlists, etc.). |
+| <key>S</key>   | `ytel-sort-videos`          | Sort videos on the current buffer.                    |
+| <key>Y</key>   | `ytel-yank-channel-feed`    | Copy the channel RSS feed for the current entry       |
+| <key>RET</key> | `ytel-open-entry`           | Open entry                                            |
 
-Pressing `s` will prompt for some search terms and populate the buffer once the results are available. One can access information about a video via the function `ytel-get-current-video` that returns the video at point. Videos returned by `ytel-get-current-video` are cl-structures so you can access their fields with the `ytel-video-*` functions. Currently videos have four fields:
+Pressing <kbd>RET</kbd> will act differently depending of the type of the current entry. If the entry is a playlist or a channel, it will open a new buffer with its videos.
+Pressing `s` will prompt for some search terms and populate the buffer once the results are available. One can access information about a video via the function `ytel-get-current-video` that returns the video at point. Videos returned by `ytel-get-current-video` are cl-structures so you can access their fields with the `ytel-video-*` functions. Currently videos have seven fields:
 
 | field       | description                                |
 |-------------|--------------------------------------------|
@@ -40,31 +45,41 @@ Pressing `s` will prompt for some search terms and populate the buffer once the 
 With this information we can implement a function to stream a video in `mpv` (provided you have `youtube-dl` installed) as follows:
 ```elisp
 (defun ytel-watch ()
-    "Stream video at point in mpv."
-    (interactive)
-    (let* ((video (ytel-get-current-video))
-     	   (id    (ytel-video-id video)))
-      (start-process "ytel mpv" nil
-		     "mpv"
-		     (concat "https://www.youtube.com/watch?v=" id))
-		     "--ytdl-format=bestvideo[height<=?720]+bestaudio/best")
-      (message "Starting streaming..."))
+  "Stream video at point in mpv."
+  (interactive)
+  (if (equal (ytel--get-entry-type (ytel-get-current-video)) 'video)
+      (let* ((video (ytel-get-current-video))
+	     (id    (ytel-video-id video)))
+	(start-process "ytel mpv" nil
+		       "mpv"
+		       (concat "https://www.youtube.com/watch?v=" id
+			       "--ytdl-format=bestvideo[height<=?720]+bestaudio/best"))
+	(message "Starting streaming..."))
+    (message "Not a video.")))
 ```
 
 And bind it to a key in `ytel-mode` with
 ```elisp
 (define-key ytel-mode-map "y" #'ytel-watch)
 ```
-
 This is of course just an example. You can similarly implement functions to:
 - open a video in the browser,
 - download a video,
 - download just the audio of a video,
-
+- download a playlist
 by relying on the correct external tool.
+
+## Customization options
+You can define default actions for `ytel-open-entry` depending on the type of entry by modifying the default-action variables, which are `ytel--default-video-action`, `ytel--default-playlist-action`, and `ytel--default-channel-action`. 
+As an example, we can take `ytel-watch` and set it as a default action for videos, by binding it to `ytel--default-video-action`.
+```elisp
+(setf ytel--default-video-action #'ytel-watch)
+```
 
 It is also possible to customize the sorting criterion of the results by setting the variable `ytel-sort-criterion` to one of the following symbols `relevance`, `rating`, `upload_date` or `view_count`.
 The default value is `relevance`.
+
+Also, you can toggle the display of Unicode icons for some items in the `*ytel*` buffer by setting `ytel-show-fancy-icons` to `t`. Customization of these icons is done with `ytel-icons`.
 
 ## Potential problems and potential fixes
 `ytel` does not use the official YouTube APIs but relies on the [Invidious](https://github.com/omarroth/invidious) APIs (that in turn circumvent YouTube ones). The variable `ytel-invidious-api-url` points to the invidious instance (by default `https://invidio.us`) to use; you might not need to ever touch this, but if [invidio.us](https://invidio.us) goes down keep in mind that you can choose [another instance](https://github.com/omarroth/invidious#invidious-instances). Moreover the default Invidious instance is generally speaking stable, but sometimes your `ytel-search` might hang; in that case `C-g` and retry.
