@@ -18,16 +18,15 @@
 ;; USA
 
 ;;; Commentary:
-;; This package provides a major mode to view channels from Invidious
-;; in an elfeed style buffer.
+;; This package provides a major mode to view channels in an elfeed style buffer.
 ;; Information about videos displayed in this buffer can be extracted
 ;; and manipulated by user-defined functions to do various things such as:
 ;; - playing them in some video player
 ;; - download them
 ;; The limit is the sky.
 ;; Currently under development.
-;;; Code:
 
+;;; Code:
 
 (require 'ytel)
 
@@ -37,29 +36,27 @@
   :options '("newest" "oldest" "popular")
   :group 'ytel-channel)
 
-(defun ytel-channel-mode ()
+(defvar ytel-channel-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "h" #'describe-mode)
+    (define-key map "q" #'ytel--quit-channel-buffer)
+    (define-key map ">" #'ytel-channel-next-page)
+    (define-key map "<" #'ytel-channel-previous-page)
+    (define-key map "S" #'ytel-channel-sort-videos)
+    (define-key map (kbd "RET") #'ytel-open-entry)
+    map)
+  "Keymap for `ytel-channel-mode'.")
+
+(define-derived-mode ytel-channel-mode text-mode
+  "ytel-channel-mode"
   "Mode for displaying ytel-channel-videos.
 \\{ytel-channel-mode-map}"
-  (interactive)
   (buffer-disable-undo)
   (use-local-map ytel-channel-mode-map)
   (make-local-variable 'ytel-videos)
   (make-local-variable 'ytel-channel-author)
-  (setf major-mode 'ytel-channel-mode
-	mode-name "ytel-channel"
-	buffer-read-only t))
-
-(defvar ytel-channel-mode-map
-  (let ((map (make-sparse-keymap)))
-    (suppress-keymap map)
-    (define-key map "q" #'ytel--quit-channel-buffer)
-    (define-key map "n" #'next-line)
-    (define-key map "p" #'previous-line)
-    (define-key map ">" #'ytel-channel-next-page)
-    (define-key map "<" #'ytel-channel-previous-page)
-    (define-key map "S" #'ytel-channel-sort-videos)
-    map)
-  "Keymap for `ytel-channel-mode'.")
+  (setq-local ytel-type-of-results "video")
+  (setf	buffer-read-only t))
 
 (defun ytel--channel-query (uid n sort)
   "Query youtube for UID videos, return the Nth page of results, sorted bv SORT."
