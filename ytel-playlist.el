@@ -33,6 +33,7 @@
 
 (defvar ytel-playlist-mode-map
   (let ((map (make-sparse-keymap)))
+    (set-keymap-parent map text-mode-map)
     (define-key map "h" #'describe-mode)
     (define-key map "q" #'ytel--quit-playlist-buffer)
     (define-key map ">" #'ytel-playlist-next-page)
@@ -41,12 +42,11 @@
     map)
   "Keymap for `ytel-playlist-mode'.")
 
-(define-derived-mode ytel-playlist-mode text-mode
+(define-derived-mode ytel-playlist-mode ytel-mode
   "ytel-playlist-mode"
   "Mode for displaying ytel-playlists.
 \\{ytel-playlist-mode-map}"
   (buffer-disable-undo)
-  (use-local-map ytel-playlist-mode-map)
   (make-local-variable 'ytel-videos)
   (make-local-variable 'ytel-playlist-title)
   (make-local-variable 'ytel-playlistId)
@@ -103,9 +103,9 @@
   "Draw buffer for the current playlist."
   (let ((inhibit-read-only t))
     (erase-buffer)
-    (setq header-line-format (concat "Displaying videos from " (propertize ytel-playlist-title 'face 'ytel-video-published-face)
+    (setq header-line-format (concat "Displaying videos from " (propertize ytel-playlist-title 'face 'ytel-parameter-face)
 				     ", page "
-				     (propertize (number-to-string ytel-current-page) 'face 'ytel-video-published-face)))
+				     (propertize (number-to-string ytel-current-page) 'face 'ytel-parameter-face)))
     (seq-do (lambda (v)
 	      (ytel-playlist--insert-entry v)
 	      (insert "\n"))

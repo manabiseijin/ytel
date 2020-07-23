@@ -233,7 +233,7 @@ too long)."
 			       (concat name
 				       (make-string (abs extra-chars) ?\ )
 				       "   ")
-			     (concat (seq-subseq name 0 ytel-author-name-reserved-space)
+			     (concat (truncate-string-to-width name ytel-author-name-reserved-space)
 				     "..."))))
     (propertize formatted-string 'face 'ytel-channel-name-face)))
 
@@ -245,7 +245,7 @@ too long)."
 			       (concat title
 				       (make-string (abs extra-chars) ?\ )
 				       "   ")
-			     (concat (seq-subseq title 0 ytel-title-video-reserved-space)
+			     (concat (truncate-string-to-width title ytel-title-video-reserved-space)
 				     "..."))))
     (propertize formatted-string 'face 'ytel-video-title-face)))
 
@@ -257,7 +257,7 @@ too long)."
 			       (concat title
 				       (make-string (abs extra-chars) ?\ )
 				       "   ")
-			     (concat (seq-subseq title 0 ytel-title-playlist-reserved-space)
+			     (concat (truncate-string-to-width title ytel-title-playlist-reserved-space)
 				     "..."))))
     (propertize formatted-string 'face 'ytel-video-title-face)))
 
@@ -269,7 +269,7 @@ too long)."
 			       (concat name
 				       (make-string (abs extra-chars) ?\ )
 				       "   ")
-			     (concat (seq-subseq name 0 ytel-name-channel-reserved-space)
+			     (concat (truncate-string-to-width name ytel-name-channel-reserved-space)
 				     "..."))))
     (propertize formatted-string 'face 'ytel-channel-name-face)))
 
@@ -470,8 +470,8 @@ If ARG is given, make a new search."
   (aref ytel-videos (1- (line-number-at-pos))))
 
 (defun ytel-yank-channel-feed (&optional arg)
-  "Yank channel's Invidious RSS feed for the current video at point.
-If ARG is given, format it as a Youtube RSS feed."
+  "Yank channel's Youtube RSS feed for the current video at point.
+If ARG is given, format it as a Invidious RSS feed."
   (interactive "P")
   (let* ((entry (ytel-get-current-video))
 	 (author (funcall (ytel--get-author-function entry) entry))

@@ -38,6 +38,7 @@
 
 (defvar ytel-channel-mode-map
   (let ((map (make-sparse-keymap)))
+    (set-keymap-parent map text-mode-map)
     (define-key map "h" #'describe-mode)
     (define-key map "q" #'ytel--quit-channel-buffer)
     (define-key map ">" #'ytel-channel-next-page)
@@ -47,12 +48,11 @@
     map)
   "Keymap for `ytel-channel-mode'.")
 
-(define-derived-mode ytel-channel-mode text-mode
+(define-derived-mode ytel-channel-mode ytel-mode
   "ytel-channel-mode"
   "Mode for displaying ytel-channel-videos.
 \\{ytel-channel-mode-map}"
   (buffer-disable-undo)
-  (use-local-map ytel-channel-mode-map)
   (make-local-variable 'ytel-videos)
   (make-local-variable 'ytel-channel-author)
   (setq-local ytel-type-of-results "video")
@@ -130,11 +130,11 @@
   (let ((inhibit-read-only t)s
 	(current-line      (line-number-at-pos)))
     (erase-buffer)
-    (setq header-line-format (concat "Displaying videos from " (propertize ytel-channel-author 'face 'ytel-video-published-face)
+    (setq header-line-format (concat "Displaying videos from " (propertize ytel-channel-author 'face 'ytel-parameter-face)
 				     ", page "
-				     (number-to-string ytel-current-page)
+				     (propertize (number-to-string ytel-current-page) 'face 'ytel-parameter-face)
 				     ", sorted by: "
-				     ytel-channel-sort-criterion))
+				     (propertize ytel-channel-sort-criterion 'face 'ytel-parameter-face)))
     (seq-do (lambda (v)
 	      (ytel--insert-channel-video v)
 	      (insert "\n"))
