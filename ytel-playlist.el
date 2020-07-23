@@ -38,6 +38,7 @@
     (define-key map "q" #'ytel--quit-playlist-buffer)
     (define-key map ">" #'ytel-playlist-next-page)
     (define-key map "<" #'ytel-playlist-previous-page)
+    (define-key map "A" #'ytel--open-channel)
     (define-key map (kbd "RET") #'ytel-open-entry)
     map)
   "Keymap for `ytel-playlist-mode'.")
