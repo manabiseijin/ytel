@@ -76,17 +76,20 @@
 				  :published (assoc-default 'published v)))))
     videos))
 
-(defun ytel-channel (author authorId)
-  "Displays videos from AUTHOR in buffer, using AUTHORID."
-  (get-buffer-create author)
-  (switch-to-buffer author)
-  (unless (eq major-mode 'ytel-channel-mode)
-    (ytel-channel-mode))
-  (setf ytel-channel-author author)
-  (setf ytel-search-term authorId)
-  (ytel-channel-get authorId))
+(defun ytel-channel ()
+  "Open a buffer for the channel of the current entry."
+  (let* ((entry (ytel-get-current-video))
+	 (author (funcall (ytel--get-author-function entry) entry))
+	 (authorId (funcall (ytel--get-authorId-function entry) entry)))
+    (get-buffer-create author)
+    (switch-to-buffer author)
+    (unless (eq major-mode 'ytel-channel-mode)
+      (ytel-channel-mode))
+    (setf ytel-channel-author author)
+    (setf ytel-search-term authorId)
+    (ytel-channel-get authorId)))
 
-(defun ytel-channel-get (authorId)
+(defun ytel-channel-get-videos (authorId)
   "Fetch videos from AUTHORID."
   (setf ytel-current-page 1)
   (setf ytel-videos (ytel--channel-query authorId ytel-current-page ytel-channel-sort-criterion))

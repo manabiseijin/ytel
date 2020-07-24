@@ -621,11 +621,8 @@ zero exit code otherwise the request body is parsed by `json-read' and returned.
 (defun ytel--open-channel ()
   "Fetch the channel page for the entry at point."
   (interactive)
-  (let* ((entry (ytel-get-current-video))
-	 (author (funcall (ytel--get-author-function entry) entry))
-	 (authorId (funcall (ytel--get-authorId-function entry) entry)))
-    (require 'ytel-channel)
-    (ytel-channel author authorId)))
+  (require 'ytel-channel)
+  (ytel-channel))
 
 (defun ytel--open-playlist ()
   "Open the contents of the entry at point, if it's a playlist."
