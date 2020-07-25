@@ -87,7 +87,7 @@
       (ytel-channel-mode))
     (setf ytel-channel-author author)
     (setf ytel-search-term authorId)
-    (ytel-channel-get authorId)))
+    (ytel-channel-get-videos authorId)))
 
 (defun ytel-channel-get-videos (authorId)
   "Fetch videos from AUTHORID."
