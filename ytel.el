@@ -270,7 +270,7 @@ zero exit code otherwise the request body is parsed by `json-read' and returned.
   "Query youtube for STRING, return the Nth page of results."
   (let ((videos (ytel--API-call "search" `(("q" ,string)
                                            ("sort_by" ,(symbol-name ytel-sort-criterion))
-					   ("page" n)
+					   ("page" ,n)
 					   ("fields" ,ytel-invidious-default-query-fields)))))
     (dotimes (i (length videos))
       (let ((v (aref videos i)))
