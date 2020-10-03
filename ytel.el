@@ -225,7 +225,8 @@ too long).")
   (let* ((query
 	  (buffer-substring-no-properties
 	   (region-beginning)
-	   (region-end))))
+	   (region-end)))
+	 (ytel-search-term query))
     (ytel)
     (ytel-search query)))
 
