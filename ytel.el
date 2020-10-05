@@ -140,7 +140,7 @@ too long).")
 			       (concat name
 				       (make-string (abs extra-chars) ?\ )
 				       "   ")
-			     (concat (seq-subseq name 0 ytel-author-name-reserved-space)
+			     (concat (truncate-string-to-width name ytel-author-name-reserved-space)
 				     "..."))))
     (propertize formatted-string 'face 'ytel-channel-name-face)))
 
@@ -152,7 +152,7 @@ too long).")
 			       (concat title
 				       (make-string (abs extra-chars) ?\ )
 				       "   ")
-			     (concat (seq-subseq title 0 ytel-title-video-reserved-space)
+			     (concat (truncate-string-to-width title ytel-title-video-reserved-space)
 				     "..."))))
     formatted-string))
 
