@@ -42,6 +42,7 @@
 (require 'cl-lib)
 (require 'json)
 (require 'seq)
+(require 'ring)
 
 (defgroup ytel ()
   "An Emacs Youtube \"front-end\"."
@@ -56,8 +57,11 @@
 (defcustom ytel-date-criterion 'year
   "Criterion to date limit the results of the search query."
   :type 'symbol
-  :options '(hour day week month year)
+  :options '(hour today week month year)
   :group 'ytel)
+
+(defvar ytel-date-options (ring-convert-sequence-to-ring '(hour today week month year))
+  "Availible date options.")
 
 (defvar ytel-invidious-api-url "https://invidio.us"
   "Url to an Invidious instance.")
@@ -115,6 +119,8 @@ too long).")
     (define-key map "h" #'describe-mode)
     (define-key map "n" #'next-line)
     (define-key map "p" #'previous-line)
+    (define-key map "d" #'ytel-rotate-date)
+    (define-key map "D" #'ytel-rotate-date-backwards)
     (define-key map "s" #'ytel-search)
     (define-key map ">" #'ytel-search-next-page)
     (define-key map "<" #'ytel-search-previous-page)
@@ -194,7 +200,10 @@ too long).")
     (setf header-line-format (concat "Search results for "
 				     (propertize ytel-search-term 'face 'ytel-video-published-face)
 				     ", page "
-				     (number-to-string ytel-current-page)))
+				     (number-to-string ytel-current-page)
+				     ", date:<"
+				     (symbol-name ytel-date-criterion)
+				     ">"))
     (seq-do (lambda (v)
 	      (ytel--insert-video v)
 	      (insert "\n"))
@@ -218,6 +227,21 @@ too long).")
       (setf ytel-date-criterion 'year)))
   (setf ytel-videos (ytel--query ytel-search-term ytel-current-page))
   (ytel--draw-buffer))
+
+(defun ytel-rotate-date (&optional reverse)
+  "Rotates through date limit.
+Optional argument REVERSE reverses the direction of the rotation."
+  (interactive)
+  (let* ((circle (if reverse 'ring-previous 'ring-next)))
+    (setq ytel-date-criterion
+	  (funcall circle ytel-date-options ytel-date-criterion)))
+  (setf ytel-videos (ytel--query ytel-search-term ytel-current-page))
+  (ytel--draw-buffer))
+
+(defun ytel-rotate-date-backwards ()
+  "Rotates through date limit backwards."
+  (interactive)
+  (ytel-rotate-date t))
 
 (defun ytel-region-search ()
   "Search youtube for marked region."
