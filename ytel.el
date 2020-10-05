@@ -221,7 +221,7 @@ too long).")
 
 (defun ytel-region-search ()
   "Search youtube for marked region."
-  (interactive )
+  (interactive)
   (let* ((query
 	  (buffer-substring-no-properties
 	   (region-beginning)
