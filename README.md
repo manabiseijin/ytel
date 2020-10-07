@@ -45,7 +45,7 @@ With this information we can implement a function to stream a video in `mpv` (pr
     "Stream video at point in mpv."
     (interactive)
     (let* ((video (ytel-get-current-video))
-     	   (id    (ytel-video-id video)))
+     	   (id    (ytel-video-id-fun video)))
       (start-process "ytel mpv" nil
 		     "mpv"
 		     (concat "https://www.youtube.com/watch?v=" id))

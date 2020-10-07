@@ -127,11 +127,11 @@ too long).")
     map)
   "Keymap for `ytel-mode'.")
 
-(define-derived-mode ytel-mode text-mode
-  "ytel-mode"
-  (setq buffer-read-only t)
-  (buffer-disable-undo)
-  (make-local-variable 'ytel-videos))
+(define-derived-mode ytel-mode tabulated-list-mode "ytel"
+  "Major Mode for ytel.
+Key bindings:
+\\{ytel-mode-map}"
+  (setq-local revert-buffer-function #'ytel--draw-buffer))
 
 (defun ytel-quit ()
   "Quit ytel buffer."
@@ -140,27 +140,7 @@ too long).")
 
 (defun ytel--format-author (name)
   "Format a channel NAME to be inserted in the *ytel* buffer."
-  (let* ((n (string-width name))
-	 (extra-chars (- n ytel-author-name-reserved-space))
-	 (formatted-string (if (<= extra-chars 0)
-			       (concat name
-				       (make-string (abs extra-chars) ?\ )
-				       "   ")
-			     (concat (truncate-string-to-width name ytel-author-name-reserved-space)
-				     "..."))))
-    (propertize formatted-string 'face 'ytel-channel-name-face)))
-
-(defun ytel--format-title (title)
-  "Format a video TITLE to be inserted in the *ytel* buffer."
-  (let* ((n (string-width title))
-	 (extra-chars (- n ytel-title-video-reserved-space))
-	 (formatted-string (if (<= extra-chars 0)
-			       (concat title
-				       (make-string (abs extra-chars) ?\ )
-				       "   ")
-			     (concat (truncate-string-to-width title ytel-title-video-reserved-space)
-				     "..."))))
-    formatted-string))
+  (propertize name 'face 'ytel-channel-name-face))
 
 (defun ytel--format-video-length (seconds)
   "Given an amount of SECONDS, format it nicely to be inserted in the *ytel* buffer."
@@ -173,42 +153,54 @@ too long).")
 
 (defun ytel--format-video-views (views)
   "Format video VIEWS to be inserted in the *ytel* buffer."
-  (propertize (concat "[views:" (number-to-string views) "]") 'face 'ytel-video-view-face))
+  (propertize (number-to-string views) 'face 'ytel-video-view-face))
 
 (defun ytel--format-video-published (published)
   "Format video PUBLISHED date to be inserted in the *ytel* buffer."
   (propertize (format-time-string ytel-published-date-time-string (seconds-to-time published))
 	      'face 'ytel-video-published-face))
 
-(defun ytel--insert-video (video)
-  "Insert `VIDEO' in the current buffer."
-  (insert (ytel--format-video-published (ytel-video-published video))
-	  " "
-	  (ytel--format-author (ytel-video-author video))
-	  " "
-	  (ytel--format-video-length (ytel-video-length video))
-	  " "
-	  (ytel--format-title (ytel-video-title video))
-	  " "
-	  (ytel--format-video-views (ytel-video-views video))))
+(defun ytel--draw-buffer (&optional _arg _noconfirm)
+  "Draw a list of videos.
+Optional argument _ARG revert expects this param.
+Optional argument _NOCONFIRM revert expects this param."
+  (interactive)
+  (setq tabulated-list-format
+	(cl-concatenate 'vector
+			'[("Date" 10 t)]
+			`[("Author" ,ytel-author-name-reserved-space t)
+			  ("Length" 8 t)]
+			`[("Title"  ,ytel-title-video-reserved-space t)
+			  ("Views"  10 t)]))
+  (setq mode-name (concat "ytal: Search results for "
+			  (propertize ytel-search-term 'face 'ytel-video-published-face)
+			  ", page "
+			  (number-to-string ytel-current-page)
+			  ", date:<"
+			  (symbol-name ytel-date-criterion)
+			  ">"))
+  (setq tabulated-list-entries
+  	(mapcar
+	 (lambda (video)
+	   (list (assoc-default 'videoId video)
+		 (vector
+		  (ytel--format-video-published (assoc-default 'published video))
+		  (ytel--format-author (assoc-default 'author video))
+		  (ytel--format-video-length (assoc-default 'lengthSeconds video))
+		  (assoc-default 'title video)
+		  (ytel--format-video-views (assoc-default 'viewCount video)))))
+	 ytel-videos))
+  (tabulated-list-init-header)
+  (tabulated-list-print))
 
-(defun ytel--draw-buffer ()
-  "Draws the ytel buffer i.e. clear everything and write down all videos in `ytel-videos'."
-  (let ((inhibit-read-only t)
-	(current-line      (line-number-at-pos)))
-    (erase-buffer)
-    (setf header-line-format (concat "Search results for "
-				     (propertize ytel-search-term 'face 'ytel-video-published-face)
-				     ", page "
-				     (number-to-string ytel-current-page)
-				     ", date:<"
-				     (symbol-name ytel-date-criterion)
-				     ">"))
-    (seq-do (lambda (v)
-	      (ytel--insert-video v)
-	      (insert "\n"))
-	    ytel-videos)
-    (goto-char (point-min))))
+(defun ytel--query (string n)
+  "Query youtube for STRING, return the Nth page of results."
+  (let ((videos (ytel--API-call "search" `(("q" ,string)
+					   ("date" ,(symbol-name ytel-date-criterion))
+                                           ("sort_by" ,(symbol-name ytel-sort-criterion))
+					   ("page" ,n)
+					   ("fields" ,ytel-invidious-default-query-fields)))))
+    videos))
 
 (defun ytel-search (query)
   "Search youtube for `QUERY', and redraw the buffer."
@@ -289,17 +281,9 @@ Optional argument REVERSE reverses the direction of the rotation."
   (when (seq-empty-p ytel-search-term)
     (call-interactively #'ytel-search)))
 
-;; Youtube interface stuff below.
-(cl-defstruct (ytel-video (:constructor ytel-video--create)
-			  (:copier nil))
-  "Information about a Youtube video."
-  (title     "" :read-only t)
-  (id        0  :read-only t)
-  (author    "" :read-only t)
-  (authorId  "" :read-only t)
-  (length    0  :read-only t)
-  (views     0  :read-only t)
-  (published 0 :read-only t))
+(defun ytel-video-id-fun (video)
+  "Return VIDEO id."
+  (assoc-default 'videoId video))
 
 (defun ytel--API-call (method args)
   "Perform a call to the invidious API method METHOD passing ARGS.
@@ -317,25 +301,6 @@ zero exit code otherwise the request body is parsed by `json-read' and returned.
 	(error "Curl had problems connecting to Invidious"))
       (goto-char (point-min))
       (json-read))))
-
-(defun ytel--query (string n)
-  "Query youtube for STRING, return the Nth page of results."
-  (let ((videos (ytel--API-call "search" `(("q" ,string)
-					   ("date" ,(symbol-name ytel-date-criterion))
-                                           ("sort_by" ,(symbol-name ytel-sort-criterion))
-					   ("page" ,n)
-					   ("fields" ,ytel-invidious-default-query-fields)))))
-    (dotimes (i (length videos))
-      (let ((v (aref videos i)))
-	(aset videos i
-	      (ytel-video--create :title     (assoc-default 'title v)
-				  :author    (assoc-default 'author v)
-				  :authorId  (assoc-default 'authorId v)
-				  :length    (assoc-default 'lengthSeconds v)
-				  :id        (assoc-default 'videoId v)
-				  :views     (assoc-default 'viewCount v)
-				  :published (assoc-default 'published v)))))
-    videos))
 
 (provide 'ytel)
 
