@@ -160,38 +160,34 @@ Key bindings:
   (propertize (format-time-string ytel-published-date-time-string (seconds-to-time published))
 	      'face 'ytel-video-published-face))
 
+(defun ytel--create-entry (video)
+  "Creates tabulated-list VIDEO entry"
+  (list (assoc-default 'videoId video)
+	(vector (ytel--format-video-published (assoc-default 'published video))
+		(ytel--format-author (assoc-default 'author video))
+		(ytel--format-video-length (assoc-default 'lengthSeconds video))
+		(assoc-default 'title video)
+		(ytel--format-video-views (assoc-default 'viewCount video)))))
+
 (defun ytel--draw-buffer (&optional _arg _noconfirm)
   "Draw a list of videos.
 Optional argument _ARG revert expects this param.
 Optional argument _NOCONFIRM revert expects this param."
   (interactive)
-  (setq tabulated-list-format
-	(cl-concatenate 'vector
-			'[("Date" 10 t)]
-			`[("Author" ,ytel-author-name-reserved-space t)
-			  ("Length" 8 t)]
-			`[("Title"  ,ytel-title-video-reserved-space t)
-			  ("Views"  10 t)]))
-  (setq mode-name (concat "ytal: Search results for "
-			  (propertize ytel-search-term 'face 'ytel-video-published-face)
-			  ", page "
-			  (number-to-string ytel-current-page)
-			  ", date:<"
-			  (symbol-name ytel-date-criterion)
-			  ">"))
-  (setq tabulated-list-entries
-  	(mapcar
-	 (lambda (video)
-	   (list (assoc-default 'videoId video)
-		 (vector
-		  (ytel--format-video-published (assoc-default 'published video))
-		  (ytel--format-author (assoc-default 'author video))
-		  (ytel--format-video-length (assoc-default 'lengthSeconds video))
-		  (assoc-default 'title video)
-		  (ytel--format-video-views (assoc-default 'viewCount video)))))
-	 ytel-videos))
-  (tabulated-list-init-header)
-  (tabulated-list-print))
+  (let* ((search-string (propertize ytel-search-term 'face 'ytel-video-published-face))
+	 (page-number (propertize (number-to-string ytel-current-page)
+				  'face 'ytel-video-published-face))
+	 (date-limit (propertize (symbol-name ytel-date-criterion)
+				  'face 'ytel-video-published-face)))
+    (setq tabulated-list-format `[("Date" 10 t)
+				  ("Author" ,ytel-author-name-reserved-space t)
+				  ("Length" 8 t) ("Title"  ,ytel-title-video-reserved-space t)
+				  ("Views" 10 t . (:right-align t))])
+    (rename-buffer (format "ytel: %s" search-string))
+    (setq-local mode-line-misc-info `((" page:" ,page-number)(" date:" ,date-limit)))
+    (setq tabulated-list-entries (mapcar 'ytel--create-entry ytel-videos))
+    (tabulated-list-init-header)
+    (tabulated-list-print)))
 
 (defun ytel--query (string n)
   "Query youtube for STRING, return the Nth page of results."
