@@ -30,19 +30,9 @@ Once everything is loaded `M-x ytel` creates a new buffer and puts it in `ytel-m
 | <key>></key> | `ytel-search-next-page`      |
 | <key><</key> | `ytel-search-previous-page`  |
 
-Pressing `s` will prompt for some search terms and populate the buffer once the results are available. One can access information about a video via the function `ytel-get-current-video` that returns the video at point. Videos returned by `ytel-get-current-video` are cl-structures so you can access their fields with the `ytel-video-*` functions. Currently videos have four fields:
+Pressing `s` will prompt for some search terms and populate the buffer once the results are available. One can access information about a video via the function `ytel-get-current-video` that returns the video at point.
 
-| field       | description                                |
-|-------------|--------------------------------------------|
-| `id`        | the video's id                             |
-| `title`     | the video's title                          |
-| `author`    | name of the author of the video            |
-| `authorId`  | id of the channel that updated the video   |
-| `length`    | length of the video in seconds             |
-| `views`     | number of views                            |
-| `published` | date of publication (unix-style timestamp) |
-
-With this information we can implement a function to stream a video in `mpv` (provided you have `youtube-dl` installed) as follows:
+You can implement a function to stream a video in `mpv` (provided you have `youtube-dl` installed) as follows:
 ```elisp
 (defun ytel-watch ()
     "Stream video at point in mpv."
