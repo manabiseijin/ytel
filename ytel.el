@@ -54,12 +54,6 @@
   :options '(relevance rating upload_date view_count)
   :group 'ytel)
 
-(defcustom ytel-date-criterion 'year
-  "Criterion to date limit the results of the search query."
-  :type 'symbol
-  :options '(hour today week month year)
-  :group 'ytel)
-
 (defvar ytel-date-options (ring-convert-sequence-to-ring '(hour today week month year))
   "Availible date options.")
 
@@ -75,6 +69,9 @@
 (defvar ytel-published-date-time-string "%Y-%m-%d"
   "Time-string used to render the published date of the video.
 See `format-time-string' for information on how to edit this variable.")
+
+(defvar-local ytel-date-criterion 'year
+  "Criterion to date limit the results of the search query.")
 
 (defvar-local ytel-current-page 1
   "Current page of the current `ytel-search-term'")
@@ -221,7 +218,7 @@ Optional argument _NOCONFIRM revert expects this param."
 Optional argument REVERSE reverses the direction of the rotation."
   (interactive)
   (let* ((circle (if reverse 'ring-previous 'ring-next)))
-    (setq ytel-date-criterion
+    (setf ytel-date-criterion
 	  (funcall circle ytel-date-options ytel-date-criterion)))
   (setf ytel-videos (ytel--query ytel-search-term ytel-current-page))
   (ytel--draw-buffer))
