@@ -121,6 +121,7 @@ too long).")
     (define-key map "D" #'ytel-rotate-date-backwards)
     (define-key map "r" #'ytel-rotate-sort)
     (define-key map "R" #'ytel-rotate-sort-backwards)
+    (define-key map "t" #'ytel-display-full-title)
     (define-key map "s" #'ytel-search)
     (define-key map ">" #'ytel-search-next-page)
     (define-key map "<" #'ytel-search-previous-page)
@@ -221,6 +222,11 @@ Optional argument _NOCONFIRM revert expects this param."
 	(setf ytel-date-criterion (intern (substring date 5)))
       (setf ytel-date-criterion 'year)))
   (ytel--draw-buffer))
+
+(defun ytel-display-full-title ()
+  "Prints full title in minibuffer."
+  (interactive)
+  (princ (format "\n%s\n" (assoc-default 'title (ytel-get-current-video)))))
 
 (defun ytel-rotate-sort (&optional reverse)
   "Rotates through sort criteria.
