@@ -48,11 +48,9 @@
   "An Emacs Youtube \"front-end\"."
   :group 'comm)
 
-(defcustom ytel-sort-criterion 'relevance
-  "Criterion to sort the results of the search query."
-  :type 'symbol
-  :options '(relevance rating upload_date view_count)
-  :group 'ytel)
+(defvar ytel-sort-options (ring-convert-sequence-to-ring
+			   '(relevance rating upload_date view_count))
+  "Availible sort options.")
 
 (defvar ytel-date-options (ring-convert-sequence-to-ring '(hour today week month year))
   "Availible date options.")
@@ -69,6 +67,9 @@
 (defvar ytel-published-date-time-string "%Y-%m-%d"
   "Time-string used to render the published date of the video.
 See `format-time-string' for information on how to edit this variable.")
+
+(defvar-local ytel-sort-criterion 'relevance
+  "Criterion to date limit the results of the search query.")
 
 (defvar-local ytel-date-criterion 'year
   "Criterion to date limit the results of the search query.")
@@ -118,6 +119,8 @@ too long).")
     (define-key map "p" #'previous-line)
     (define-key map "d" #'ytel-rotate-date)
     (define-key map "D" #'ytel-rotate-date-backwards)
+    (define-key map "r" #'ytel-rotate-sort)
+    (define-key map "R" #'ytel-rotate-sort-backwards)
     (define-key map "s" #'ytel-search)
     (define-key map ">" #'ytel-search-next-page)
     (define-key map "<" #'ytel-search-previous-page)
@@ -175,6 +178,10 @@ Optional argument _NOCONFIRM revert expects this param."
 	 (page-number (propertize (number-to-string ytel-current-page)
 				  'face 'ytel-video-published-face))
 	 (date-limit (propertize (symbol-name ytel-date-criterion)
+				 'face 'ytel-video-published-face))
+	 (sort-strings '(upload_date "date" view_count "views"
+				     rating "rating" relevance "relevance"))
+	 (sort-limit (propertize (plist-get sort-strings ytel-sort-criterion)
 				  'face 'ytel-video-published-face)))
     (setq tabulated-list-format `[("Date" 10 t)
 				  ("Author" ,ytel-author-name-reserved-space t)
@@ -182,7 +189,9 @@ Optional argument _NOCONFIRM revert expects this param."
 				  ("Views" 10 t . (:right-align t))])
     (setf ytel-videos (ytel--query ytel-search-term ytel-current-page))
     (rename-buffer (format "ytel: %s" search-string))
-    (setq-local mode-line-misc-info `((" page:" ,page-number)(" date:" ,date-limit)))
+    (setq-local mode-line-misc-info `(("page:" ,page-number)
+				      (" date:" ,date-limit)
+				      (" sort:" ,sort-limit)))
     (setq tabulated-list-entries (mapcar 'ytel--create-entry ytel-videos))
     (tabulated-list-init-header)
     (tabulated-list-print)))
@@ -212,6 +221,20 @@ Optional argument _NOCONFIRM revert expects this param."
 	(setf ytel-date-criterion (intern (substring date 5)))
       (setf ytel-date-criterion 'year)))
   (ytel--draw-buffer))
+
+(defun ytel-rotate-sort (&optional reverse)
+  "Rotates through sort criteria.
+Optional argument REVERSE reverses the direction of the rotation."
+  (interactive)
+  (let* ((circle (if reverse 'ring-previous 'ring-next)))
+    (setf ytel-sort-criterion
+	  (funcall circle ytel-sort-options ytel-sort-criterion)))
+  (ytel--draw-buffer))
+
+(defun ytel-rotate-sort-backwards ()
+  "Rotates through sorting backwards."
+  (interactive)
+  (ytel-rotate-sort t))
 
 (defun ytel-rotate-date (&optional reverse)
   "Rotates through date limit.
