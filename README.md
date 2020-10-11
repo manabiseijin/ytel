@@ -1,9 +1,7 @@
 # ytel
 `ytel` is an experimental YouTube "frontend" for Emacs. It's goal is to allow the user to collect the results of a YouTube search in an elfeed-like buffer and then manipulate them with Emacs Lisp. The gif below shows that `ytel` can be used to play videos in an external player, to learn how to emulate it refer to the [usage](#usage) section below.
 
-<p align="center">
-  <img src="https://github.com/gRastello/ytel/blob/master/pic/demonstration.gif">
-</p>
+![demonstration](pic/demonstration.gif)
 
 This project was inspired by [elfeed](https://github.com/skeeto/elfeed/) and [Invidious](https://github.com/omarroth/invidious) (it does indeed use the Invidious APIs).
 
