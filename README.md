@@ -21,11 +21,14 @@ Once everything is loaded `M-x ytel` creates a new buffer and puts it in `ytel-m
 | <key>n</key> | `next-line`                  |
 | <key>p</key> | `previous-line`              |
 | <key>q</key> | `ytel-quit`                  |
+| <key>d</key> | `ytel-rotate-date`           |
+| <key>D</key> | `ytel-rotate-date-backwards` |
+| <key>r</key> | `ytel-rotate-sort`           |
+| <key>R</key> | `ytel-rotate-sort-backwards` |
+| <key>t</key> | `ytel-display-full-title`    |
 | <key>s</key> | `ytel-search`                |
 | <key>></key> | `ytel-search-next-page`      |
 | <key><</key> | `ytel-search-previous-page`  |
-| <key>s</key> | `ytel-rotate-date`           |
-| <key>s</key> | `ytel-rotate-date-backwards` |
 
 Pressing `s` will prompt for some search terms and populate the buffer once the results are available. One can access information about a video via the function `ytel-get-current-video` that returns the video at point. Videos returned by `ytel-get-current-video` are cl-structures so you can access their fields with the `ytel-video-*` functions. Currently videos have four fields:
 
