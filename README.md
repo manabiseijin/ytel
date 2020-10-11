@@ -32,6 +32,14 @@ Once everything is loaded `M-x ytel` creates a new buffer and puts it in `ytel-m
 
 Pressing `s` will prompt for some search terms and populate the buffer once the results are available. One can access information about a video via the function `ytel-get-current-video` that returns the video at point.
 
+You can create a buffer or file with content like that with a optional date limiter:
+```
+Linux date:week
+Emacs date:today
+```
+
+mark a line and start ytel-region-search on them, so that you don't have to remember and don't have to manually input all your searches. Also you can keep open 1 buffer per search and operate them in parralel.
+
 You can implement a function to stream a video in `mpv` (provided you have `youtube-dl` installed) as follows:
 ```elisp
 (defun ytel-watch ()
