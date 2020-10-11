@@ -180,6 +180,7 @@ Optional argument _NOCONFIRM revert expects this param."
 				  ("Author" ,ytel-author-name-reserved-space t)
 				  ("Length" 8 t) ("Title"  ,ytel-title-video-reserved-space t)
 				  ("Views" 10 t . (:right-align t))])
+    (setf ytel-videos (ytel--query ytel-search-term ytel-current-page))
     (rename-buffer (format "ytel: %s" search-string))
     (setq-local mode-line-misc-info `((" page:" ,page-number)(" date:" ,date-limit)))
     (setq tabulated-list-entries (mapcar 'ytel--create-entry ytel-videos))
@@ -210,7 +211,6 @@ Optional argument _NOCONFIRM revert expects this param."
 		    (assoc-default t terms))))
 	(setf ytel-date-criterion (intern (substring date 5)))
       (setf ytel-date-criterion 'year)))
-  (setf ytel-videos (ytel--query ytel-search-term ytel-current-page))
   (ytel--draw-buffer))
 
 (defun ytel-rotate-date (&optional reverse)
@@ -220,7 +220,6 @@ Optional argument REVERSE reverses the direction of the rotation."
   (let* ((circle (if reverse 'ring-previous 'ring-next)))
     (setf ytel-date-criterion
 	  (funcall circle ytel-date-options ytel-date-criterion)))
-  (setf ytel-videos (ytel--query ytel-search-term ytel-current-page))
   (ytel--draw-buffer))
 
 (defun ytel-rotate-date-backwards ()
@@ -242,8 +241,6 @@ Optional argument REVERSE reverses the direction of the rotation."
 (defun ytel-search-next-page ()
   "Switch to the next page of the current search.  Redraw the buffer."
   (interactive)
-  (setf ytel-videos (ytel--query ytel-search-term
-				 (1+ ytel-current-page)))
   (setf ytel-current-page (1+ ytel-current-page))
   (ytel--draw-buffer))
 
@@ -251,8 +248,6 @@ Optional argument REVERSE reverses the direction of the rotation."
   "Switch to the previous page of the current search.  Redraw the buffer."
   (interactive)
   (when (> ytel-current-page 1)
-    (setf ytel-videos (ytel--query ytel-search-term
-				   (1- ytel-current-page)))
     (setf ytel-current-page (1- ytel-current-page))
     (ytel--draw-buffer)))
 
