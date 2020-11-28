@@ -71,6 +71,9 @@ The default value is `relevance`.
 
 Currently some wide unicode characters (such as Chinese/Japanese/Korean characters) are *very likely* to mess up the `*ytel*` buffer. The messing up is not that bad but things will not be perfectly aligned. Fixing this problem will most likely require a rewrite of how the ytel buffer is actually drawn. We're (somewhat) working on it.
 
+## Extra
+There's an [extension](https://github.com/xFA25E/ytel-show) to browse comments and video information.
+
 ## Contributing
 Feel free to open an issue or send a pull request. I'm quite new to writing Emacs packages so any help is appreciated.
 
