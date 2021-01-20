@@ -183,13 +183,18 @@ Optional argument _NOCONFIRM revert expects this param."
 	 (sort-strings '(upload_date "date" view_count "views"
 				     rating "rating" relevance "relevance"))
 	 (sort-limit (propertize (plist-get sort-strings ytel-sort-criterion)
-				  'face 'ytel-video-published-face)))
+				 'face 'ytel-video-published-face))
+	 (new-buffer-name (format "ytel: %s" search-string)))
     (setq tabulated-list-format `[("Date" 10 t)
 				  ("Author" ,ytel-author-name-reserved-space t)
 				  ("Length" 8 t) ("Title"  ,ytel-title-video-reserved-space t)
 				  ("Views" 10 t . (:right-align t))])
     (setf ytel-videos (ytel--query ytel-search-term ytel-current-page))
-    (rename-buffer (format "ytel: %s" search-string))
+
+    (if (get-buffer new-buffer-name)
+	(switch-to-buffer (get-buffer-create new-buffer-name))
+      (rename-buffer new-buffer-name))
+
     (setq-local mode-line-misc-info `(("page:" ,page-number)
 				      (" date:" ,date-limit)
 				      (" sort:" ,sort-limit)))
@@ -214,7 +219,7 @@ Optional argument _NOCONFIRM revert expects this param."
 	 (terms (seq-group-by (lambda (elem)
 				(s-contains-p ":" elem))
 			      query-words)))
-    (setf ytel-search-term
+    (setq-local ytel-search-term
 	  (s-join " " (assoc-default nil terms)))
     (if-let ((date (seq-find
 		    (lambda (s) (s-starts-with-p "date:" s) )
@@ -256,6 +261,7 @@ Optional argument REVERSE reverses the direction of the rotation."
   (interactive)
   (ytel-rotate-date t))
 
+;;;###autoload
 (defun ytel-region-search ()
   "Search youtube for marked region."
   (interactive)
@@ -264,7 +270,9 @@ Optional argument REVERSE reverses the direction of the rotation."
 	   (region-beginning)
 	   (region-end)))
 	 (ytel-search-term query))
-    (ytel)
+    (switch-to-buffer (ytel-buffer))
+    (unless (eq major-mode 'ytel-mode)
+      (ytel-mode))
     (ytel-search query)))
 
 (defun ytel-search-next-page ()
@@ -295,8 +303,7 @@ Optional argument REVERSE reverses the direction of the rotation."
   (switch-to-buffer (ytel-buffer))
   (unless (eq major-mode 'ytel-mode)
     (ytel-mode))
-  (when (seq-empty-p ytel-search-term)
-    (call-interactively #'ytel-search)))
+  (call-interactively #'ytel-search))
 
 (defun ytel-video-id-fun (video)
   "Return VIDEO id."
