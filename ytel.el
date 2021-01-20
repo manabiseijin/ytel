@@ -125,6 +125,8 @@ too long).")
     (define-key map "s" #'ytel-search)
     (define-key map ">" #'ytel-search-next-page)
     (define-key map "<" #'ytel-search-previous-page)
+    (define-key map [remap next-line] #'ytel-next-line)
+    (define-key map [remap previous-line] #'ytel-previous-line)
     map)
   "Keymap for `ytel-mode'.")
 
@@ -133,6 +135,42 @@ too long).")
 Key bindings:
 \\{ytel-mode-map}"
   (setq-local revert-buffer-function #'ytel--draw-buffer))
+
+(defun ytel-show-image-asyncron ()
+    "Display Thumbnail and Titel of video on point."
+    (interactive)
+    (let* ((video (ytel-get-current-video))
+	   (id    (ytel-video-id-fun video))
+	   (title (assoc-default 'title (ytel-get-current-video))))
+      (url-retrieve
+       (format "%s/vi/%s/mqdefault.jpg"
+	       ytel-invidious-api-url id)
+       'ytel-show-image2 (list title))))
+
+(defun ytel-show-image2 (http-header title)
+    "Helper function for showing buffer with image."
+    (let* ((buffer (current-buffer))
+	   (buf-name "youtube image")
+	   (data (with-current-buffer buffer
+		   (search-forward "\n\n")
+		   (buffer-substring (point) (point-max))))
+	   (image (create-image data nil t )))
+      (kill-buffer buffer)
+      (with-current-buffer-window buf-name nil nil
+	(insert (format "%s\n\n\n\n\n" title))
+	(insert-image image))))
+
+(defun ytel-next-line ()
+  "docstring"
+  (interactive)
+  (forward-line)
+  (ytel-show-image-asyncron))
+
+(defun ytel-previous-line ()
+  "docstring"
+  (interactive)
+  (forward-line -1)
+  (ytel-show-image-asyncron))
 
 (defun ytel-quit ()
   "Quit ytel buffer."
