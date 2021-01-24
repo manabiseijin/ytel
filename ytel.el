@@ -52,7 +52,7 @@
 			   '(relevance rating upload_date view_count))
   "Availible sort options.")
 
-(defvar ytel-date-options (ring-convert-sequence-to-ring '(hour today week month year))
+(defvar ytel-date-options (ring-convert-sequence-to-ring '(hour today week month year all))
   "Availible date options.")
 
 (defvar ytel-invidious-api-url "https://invidio.us"
@@ -134,40 +134,50 @@ too long).")
   "Major Mode for ytel.
 Key bindings:
 \\{ytel-mode-map}"
+  (setq-local split-height-threshold 22)
   (setq-local revert-buffer-function #'ytel--draw-buffer))
 
 (defun ytel-show-image-asyncron ()
     "Display Thumbnail and Titel of video on point."
     (interactive)
-    (let* ((video (ytel-get-current-video))
-	   (id    (ytel-video-id-fun video))
-	   (title (assoc-default 'title (ytel-get-current-video))))
-      (url-retrieve
-       (format "%s/vi/%s/mqdefault.jpg"
-	       ytel-invidious-api-url id)
-       'ytel-show-image2 (list title))))
+    (if-let ((video (ytel-get-current-video))
+	     (id    (ytel-video-id-fun video))
+	     (title (assoc-default 'title (ytel-get-current-video))))
+	(url-retrieve
+	 (format "%s/vi/%s/mqdefault.jpg"
+		 ytel-invidious-api-url id)
+	 'ytel-display-video-detail-popup (list title))))
 
-(defun ytel-show-image2 (http-header title)
-    "Helper function for showing buffer with image."
+(defun ytel-display-video-detail-popup (status title)
+    "Create or raise popup-buffer with video details.
+Argument STATUS event lists of http request
+for further details look at `url-retrieve'.
+Argument TITLE video title."
     (let* ((buffer (current-buffer))
-	   (buf-name "youtube image")
+	   (buf-name "ytel: Video Details")
+	   (popup-buffer (get-buffer-create buf-name))
 	   (data (with-current-buffer buffer
 		   (search-forward "\n\n")
 		   (buffer-substring (point) (point-max))))
-	   (image (create-image data nil t )))
+	   (image (create-image data nil t)))
       (kill-buffer buffer)
-      (with-current-buffer-window buf-name nil nil
-	(insert (format "%s\n\n\n\n\n" title))
-	(insert-image image))))
+      (let* ((inhibit-read-only t))
+	(with-current-buffer popup-buffer
+			     (kill-region (point-min) (point-max))
+			     (insert (format "\n%s\n\n" title))
+			     (insert-image image)
+			     (help-mode)))
+      (unless (get-buffer-window popup-buffer (selected-frame))
+	(display-buffer-pop-up-window popup-buffer nil))))
 
 (defun ytel-next-line ()
-  "docstring"
+  "Wrapper for the `next-line' function."
   (interactive)
   (forward-line)
   (ytel-show-image-asyncron))
 
 (defun ytel-previous-line ()
-  "docstring"
+  "Wrapper for the `previous-line' function."
   (interactive)
   (forward-line -1)
   (ytel-show-image-asyncron))
@@ -175,7 +185,10 @@ Key bindings:
 (defun ytel-quit ()
   "Quit ytel buffer."
   (interactive)
-  (quit-window))
+  (if-let ((popup (get-buffer "ytel: Video Details")))
+      (progn (delete-window (get-buffer-window popup))
+	     (kill-buffer popup))
+    (quit-window)))
 
 (defun ytel--format-author (name)
   "Format a channel NAME to be inserted in the *ytel* buffer."
@@ -200,7 +213,7 @@ Key bindings:
 	      'face 'ytel-video-published-face))
 
 (defun ytel--create-entry (video)
-  "Creates tabulated-list VIDEO entry"
+  "Create tabulated-list VIDEO entry."
   (list (assoc-default 'videoId video)
 	(vector (ytel--format-video-published (assoc-default 'published video))
 		(ytel--format-author (assoc-default 'author video))
@@ -238,7 +251,8 @@ Optional argument _NOCONFIRM revert expects this param."
 				      (" sort:" ,sort-limit)))
     (setq tabulated-list-entries (mapcar 'ytel--create-entry ytel-videos))
     (tabulated-list-init-header)
-    (tabulated-list-print)))
+    (tabulated-list-print)
+    (ytel-show-image-asyncron)))
 
 (defun ytel--query (string n)
   "Query youtube for STRING, return the Nth page of results."
@@ -263,7 +277,7 @@ Optional argument _NOCONFIRM revert expects this param."
 		    (lambda (s) (s-starts-with-p "date:" s) )
 		    (assoc-default t terms))))
 	(setf ytel-date-criterion (intern (substring date 5)))
-      (setf ytel-date-criterion 'year)))
+      (setf ytel-date-criterion 'all)))
   (ytel--draw-buffer))
 
 (defun ytel-display-full-title ()
@@ -328,7 +342,8 @@ Optional argument REVERSE reverses the direction of the rotation."
 
 (defun ytel-get-current-video ()
   "Get the currently selected video."
-  (aref ytel-videos (1- (line-number-at-pos))))
+  (when (<= (line-number-at-pos) (length ytel-videos))
+    (aref ytel-videos (1- (line-number-at-pos)))))
 
 (defun ytel-buffer ()
   "Name for the main ytel buffer."
