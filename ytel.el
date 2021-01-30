@@ -61,7 +61,7 @@
 (defvar ytel-invidious-default-query-fields "author,lengthSeconds,title,videoId,authorId,viewCount,published"
   "Default fields of interest for video search.")
 
-(defvar ytel-videos '()
+(defvar-local ytel-videos '()
   "List of videos currently on display.")
 
 (defvar ytel-published-date-time-string "%Y-%m-%d"
