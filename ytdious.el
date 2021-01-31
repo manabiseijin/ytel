@@ -147,9 +147,9 @@ Key bindings:
 		 ytdious-invidious-api-url id)
 	 'ytdious-display-video-detail-popup (list title))))
 
-(defun ytdious-display-video-detail-popup (status title)
+(defun ytdious-display-video-detail-popup (_status title)
     "Create or raise popup-buffer with video details.
-Argument STATUS event lists of http request
+Argument _STATUS event lists of http request
 for further details look at `url-retrieve'.
 Argument TITLE video title."
     (let* ((buffer (current-buffer))
