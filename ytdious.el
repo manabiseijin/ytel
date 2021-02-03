@@ -248,7 +248,7 @@ Optional argument _NOCONFIRM revert expects this param."
     (setq-local mode-line-misc-info `(("page:" ,page-number)
 				      (" date:" ,date-limit)
 				      (" sort:" ,sort-limit)))
-    (setq tabulated-list-entries (mapcar 'ytdious--create-entry ytdious-videos))
+    (setq tabulated-list-entries (mapcar #'ytdious--create-entry ytdious-videos))
     (tabulated-list-init-header)
     (tabulated-list-print)
     (ytdious-show-image-asyncron)))
