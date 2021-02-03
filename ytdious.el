@@ -268,12 +268,12 @@ Optional argument _NOCONFIRM revert expects this param."
   (setf ytdious-current-page 1)
   (let* ((query-words (split-string query))
 	 (terms (seq-group-by (lambda (elem)
-				(s-contains-p ":" elem))
+				(string-match-p ":" elem))
 			      query-words)))
     (setq-local ytdious-search-term
-	  (s-join " " (assoc-default nil terms)))
+	  (string-join (assoc-default nil terms) " "))
     (if-let ((date (seq-find
-		    (lambda (s) (s-starts-with-p "date:" s) )
+		    (lambda (s) (string-prefix-p "date:" s) )
 		    (assoc-default t terms))))
 	(setf ytdious-date-criterion (intern (substring date 5)))
       (setf ytdious-date-criterion 'all)))
