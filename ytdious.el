@@ -270,7 +270,7 @@ Optional argument _NOCONFIRM revert expects this param."
   (setf ytdious-current-page 1)
   (let* ((query-words (split-string query))
 	 (terms (seq-group-by (lambda (elem)
-				(string-match-p ":" elem))
+				(numberp (string-match-p ":" elem)))
 			      query-words)))
     (setq-local ytdious-search-term
 	  (string-join (assoc-default nil terms) " "))
