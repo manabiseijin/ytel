@@ -81,6 +81,9 @@ See `format-time-string' for information on how to edit this variable.")
 (defvar-local ytdious-search-term ""
   "Current search string as used by `ytdious-search'")
 
+(defvar-local ytdious-channel ""
+  "Current channel as used by `ytdious-search'")
+
 (defvar ytdious-author-name-reserved-space 20
   "Number of characters reserved for the channel's name in the *ytdious* buffer.
 Note that there will always 3 extra spaces for eventual dots (for names that are
@@ -124,6 +127,9 @@ too long).")
     (define-key map "R" #'ytdious-rotate-sort-backwards)
     (define-key map "t" #'ytdious-display-full-title)
     (define-key map "s" #'ytdious-search)
+    (define-key map "S" #'ytdious-search-recent)
+    (define-key map "c" #'ytdious-view-channel)
+    (define-key map "C" #'ytdious-view-channel-at-point)
     (define-key map ">" #'ytdious-search-next-page)
     (define-key map "<" #'ytdious-search-previous-page)
     (define-key map [remap next-line] #'ytdious-next-line)
@@ -227,7 +233,7 @@ Argument TITLE video title."
 Optional argument _ARG revert expects this param.
 Optional argument _NOCONFIRM revert expects this param."
   (interactive)
-  (let* ((search-string (propertize ytdious-search-term 'face 'ytdious-video-published-face))
+  (let* ((title (or ytdious-channel ytdious-search-term))
 	 (page-number (propertize (number-to-string ytdious-current-page)
 				  'face 'ytdious-video-published-face))
 	 (date-limit (propertize (symbol-name ytdious-date-criterion)
@@ -235,17 +241,28 @@ Optional argument _NOCONFIRM revert expects this param."
 	 (sort-strings '(upload_date "date" view_count "views"
 				     rating "rating" relevance "relevance"))
 	 (sort-limit (propertize (plist-get sort-strings ytdious-sort-criterion)
-				 'face 'ytdious-video-published-face))
-	 (new-buffer-name (format "ytdious: %s" search-string)))
+				 'face 'ytdious-video-published-face)))
     (setq tabulated-list-format `[("Date" 10 t)
 				  ("Author" ,ytdious-author-name-reserved-space t)
 				  ("Length" 8 t) ("Title"  ,ytdious-title-video-reserved-space t)
 				  ("Views" 10 t . (:right-align t))])
-    (setf ytdious-videos (ytdious--query ytdious-search-term ytdious-current-page))
-
-    (if (get-buffer new-buffer-name)
-	(switch-to-buffer (get-buffer-create new-buffer-name))
-      (rename-buffer new-buffer-name))
+    (setf ytdious-videos
+	  (funcall
+	   (if ytdious-channel 'ytdious--query-channel 'ytdious--query)
+	   title ytdious-current-page))
+    (let* ((title-string
+	    (propertize
+	     (apply 'format "[%s: %s]"
+		    (if ytdious-channel
+			(list "CHAN"
+			      (assoc-default 'author
+					     (seq-first ytdious-videos)))
+		      (list "SRCH" title)))
+	     'face 'ytdious-video-published-face))
+	   (new-buffer-name (format "ytdious %s" title-string)))
+      (if (get-buffer new-buffer-name)
+	  (switch-to-buffer (get-buffer-create new-buffer-name))
+	(rename-buffer new-buffer-name)))
 
     (setq-local mode-line-misc-info `(("page:" ,page-number)
 				      (" date:" ,date-limit)
@@ -264,6 +281,11 @@ Optional argument _NOCONFIRM revert expects this param."
 					   ("fields" ,ytdious-invidious-default-query-fields)))))
     videos))
 
+(defun ytdious--query-channel (string n)
+  "Query youtube for STRING, return the Nth page of results."
+  (let ((videos (ytdious--API-call "channels/videos" nil string)))
+    videos))
+
 (defun ytdious-search (query)
   "Search youtube for `QUERY', and redraw the buffer."
   (interactive "sSearch terms: ")
@@ -279,6 +301,27 @@ Optional argument _NOCONFIRM revert expects this param."
 		    (assoc-default t terms))))
 	(setf ytdious-date-criterion (intern (substring date 5)))
       (setf ytdious-date-criterion 'all)))
+  (setf ytdious-channel 'nil)
+  (ytdious--draw-buffer))
+
+(defun ytdious-search-recent ()
+  "docstring"
+  (interactive)
+  (ytdious-search (read-from-minibuffer "Search terms: " ytdious-search-term)))
+
+
+(defun ytdious-view-channel (channel)
+  "Open youtube `CHANNEL', and redraw the buffer."
+  (interactive "sChannel: ")
+  (setf ytdious-current-page 1)
+  (setq-local ytdious-channel channel)
+  (ytdious--draw-buffer))
+
+(defun ytdious-view-channel-at-point ()
+  "Open youtube `CHANNEL', and redraw the buffer."
+  (interactive)
+  (setf ytdious-current-page 1)
+  (setq-local ytdious-channel (assoc-default 'authorId (ytdious-get-current-video)))
   (ytdious--draw-buffer))
 
 (defun ytdious-display-full-title ()
@@ -363,7 +406,7 @@ Optional argument REVERSE reverses the direction of the rotation."
   "Return VIDEO id."
   (assoc-default 'videoId video))
 
-(defun ytdious--API-call (method args)
+(defun ytdious--API-call (method args &optional ucid)
   "Perform a call to the invidious API method METHOD passing ARGS.
 
 Curl is used to perform the request.  An error is thrown if it exits with a non
@@ -373,8 +416,10 @@ zero exit code otherwise the request body is parsed by `json-read' and returned.
 				   "--silent"
 				   "-X" "GET"
 				   (concat ytdious-invidious-api-url
-					   "/api/v1/" method
-					   "?" (url-build-query-string args)))))
+					   "/api/v1/"
+					   method
+					   (when ucid (format "/%s%s" ucid "?sort_by=newest"))
+					   (when args (concat "?" (url-build-query-string args)))))))
       (unless (= exit-code 0)
 	(error "Curl had problems connecting to Invidious"))
       (goto-char (point-min))
