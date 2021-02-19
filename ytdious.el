@@ -53,6 +53,15 @@
 			   '(relevance rating upload_date view_count))
   "Availible sort options.")
 
+(defvar ytdious-player-external t
+  "Whether to use an external player")
+
+(defvar ytdious-player-external-command "mpv"
+  "Command for external player")
+
+(defvar ytdious-player-external-options "--ytdl-format=bestvideo[height<=?1080]+bestaudio/best"
+  "Options for external player")
+
 (defvar ytdious-date-options (ring-convert-sequence-to-ring '(hour today week month year all))
   "Availible date options.")
 
@@ -124,6 +133,7 @@ too long).")
     (define-key map "s" #'ytdious-search)
     (define-key map ">" #'ytdious-search-next-page)
     (define-key map "<" #'ytdious-search-previous-page)
+    (define-key map (kbd "RET") #'ytdious-play)
     (define-key map [remap next-line] #'ytdious-next-line)
     (define-key map [remap previous-line] #'ytdious-previous-line)
     map)
@@ -135,6 +145,22 @@ Key bindings:
 \\{ytdious-mode-map}"
   (setq-local split-height-threshold 22)
   (setq-local revert-buffer-function #'ytdious--draw-buffer))
+
+(defun ytdious-play ()
+  "Play video at point"
+  (interactive)
+  (if ytdious-player-external (ytdious-play-external)))
+
+(defun ytdious-play-external ()
+  "Play video at point in external player."
+  (interactive)
+  (let* ((video (ytdious-get-current-video))
+    (start-process "ytdious player" nil
+	 (id    (ytdious-video-id-fun video)))
+		   ytdious-player-external-command
+		   ytdious-player-external-options
+		   (concat ytdious-invidious-api-url "/watch?v=" id)))
+  (message "Starting streaming..."))
 
 (defun ytdious-show-image-asyncron ()
     "Display Thumbnail and Titel of video on point."
