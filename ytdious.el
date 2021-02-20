@@ -194,8 +194,7 @@ Key bindings:
 (defun ytdious-play-external ()
   "Play video at point in external player."
   (interactive)
-  (let* ((video (ytdious-get-current-video))
-	 (id    (ytdious-video-id-fun video)))
+  (let* ((id (tabulated-list-get-id)))
     (start-process "ytdious player" "ytdious player"
 		   ytdious-player-external-command
 		   ytdious-player-external-options
@@ -206,11 +205,11 @@ Key bindings:
     (interactive)
     (if-let ((video (ytdious-get-current-video))
 	     (id    (ytdious-video-id-fun video))
-	     (title (assoc-default 'title (ytdious-get-current-video))))
+	     (title (assoc-default 'title video)))
 	(url-retrieve
 	 (format "%s/vi/%s/mqdefault.jpg"
 		 ytdious-invidious-api-url id)
-	 'ytdious-display-video-detail-popup (list title))))
+	 'ytdious-display-video-detail-popup (list title) t)))
 
 (defun ytdious-display-video-detail-popup (_status title)
     "Create or raise popup-buffer with video details.
@@ -303,8 +302,8 @@ Optional argument _NOCONFIRM revert expects this param."
     (setq tabulated-list-format `[("Date" 10 t)
 				  ("Author" ,ytdious-author-name-reserved-space t)
 				  ("Length" 8 t) ("Title"  ,ytdious-title-video-reserved-space t)
-				  ("Views" 10 t . (:right-align t))])
     (setf ytdious-videos (ytdious--query ytdious-search-term ytdious-current-page))
+				  ("Views" 10 nil . (:right-align t))])
 
     (if (get-buffer new-buffer-name)
 	(switch-to-buffer (get-buffer-create new-buffer-name))
@@ -407,7 +406,10 @@ Optional argument REVERSE reverses the direction of the rotation."
 (defun ytdious-get-current-video ()
   "Get the currently selected video."
   (unless (ytdious-pos-last-line-p)
-    (aref ytdious-videos (1- (line-number-at-pos)))))
+    (seq-find (lambda (video)
+		(equal (tabulated-list-get-id)
+		       (assoc-default 'videoId video)))
+	      ytdious-videos)))
 
 (defun ytdious-buffer ()
   "Name for the main ytdious buffer."
