@@ -14,18 +14,20 @@ While `ytdious` does not depend on any Emacs package it does depend on `curl` so
 ## Usage
 Once everything is loaded `M-x ytdious` creates a new buffer and puts it in `ytdious-mode`. This major mode has just a few bindings (for now):
 
-| key            | binding                         |
-|----------------|---------------------------------|
-| <key>q</key>   | `ytdious-quit`                  |
-| <key>d</key>   | `ytdious-rotate-date`           |
-| <key>D</key>   | `ytdious-rotate-date-backwards` |
-| <key>r</key>   | `ytdious-rotate-sort`           |
-| <key>R</key>   | `ytdious-rotate-sort-backwards` |
-| <key>t</key>   | `ytdious-display-full-title`    |
-| <key>s</key>   | `ytdious-search`                |
-| <key>></key>   | `ytdious-search-next-page`      |
-| <key><</key>   | `ytdious-search-previous-page`  |
-| <key>RET</key> | `ytdious-play`                  |
+| key                 | binding                         |
+|---------------------|---------------------------------|
+| <key>q</key>        | `ytdious-quit`                  |
+| <key>d</key>        | `ytdious-rotate-date`           |
+| <key>D</key>        | `ytdious-rotate-date-backwards` |
+| <key>r</key>        | `ytdious-rotate-sort`           |
+| <key>R</key>        | `ytdious-rotate-sort-backwards` |
+| <key>t</key>        | `ytdious-display-full-title`    |
+| <key>s</key>        | `ytdious-search`                |
+| <key>></key>        | `ytdious-search-next-page`      |
+| <key><</key>        | `ytdious-search-previous-page`  |
+| <key>RET</key>      | `ytdious-play`                  |
+| <key>C-return</key> | `ytdious-play-continiously`     |
+| <key>C-escape</key> | `ytdious-stop-continiously`     |
 
 Pressing `s` will prompt for some search terms and populate the buffer once the results are available. One can access information about a video via the function `ytdious-get-current-video` that returns the video at point.
 

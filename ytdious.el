@@ -53,6 +53,12 @@
 			   '(relevance rating upload_date view_count))
   "Availible sort options.")
 
+(defvar ytdious-timer nil
+  "Timer object used by `ytdious-play-continious'")
+
+(defvar ytdious-timer-buffer nil
+  "Timer buffer object used by `ytdious-play-continious'")
+
 (defvar ytdious-player-external t
   "Whether to use an external player")
 
@@ -134,6 +140,8 @@ too long).")
     (define-key map ">" #'ytdious-search-next-page)
     (define-key map "<" #'ytdious-search-previous-page)
     (define-key map (kbd "RET") #'ytdious-play)
+    (define-key map [(control return)] #'ytdious-play-continious)
+    (define-key map [(control escape)] #'ytdious-stop-continious)
     (define-key map [remap next-line] #'ytdious-next-line)
     (define-key map [remap previous-line] #'ytdious-previous-line)
     map)
@@ -151,16 +159,47 @@ Key bindings:
   (interactive)
   (if ytdious-player-external (ytdious-play-external)))
 
+(defun ytdious-play-continious ()
+  "Play videos continiously from point"
+  (interactive)
+  (message "starting continious playback")
+  (cancel-timer ytdious-timer)
+  (let* ((process "ytdious player"))
+    (when (processp process)
+      (kill-process process)))
+  (if ytdious-player-external
+      (progn
+	(ytdious-play-external)
+	(setq ytdious-timer-buffer (current-buffer)
+	      ytdious-timer (run-with-timer 5 1 'ytdious--tick-continious-player)))))
+
+(defun ytdious-stop-continious ()
+  "Stop continious player"
+  (interactive)
+  (cancel-timer ytdious-timer)
+  (message "continious playback stopped"))
+
+(defun ytdious-pos-last-line-p ()
+  "Checks if cursor is in last empty line"
+  (> (line-number-at-pos) (length ytdious-videos)))
+
+(defun ytdious--tick-continious-player ()
+  "Keeps continious player running till reached end"
+  (unless (process-status "ytdious player")
+    (with-current-buffer ytdious-timer-buffer
+      (ytdious-next-line)
+      (if (ytdious-pos-last-line-p)
+	  (ytdious-stop-continious)
+	(ytdious-play-external)))))
 (defun ytdious-play-external ()
   "Play video at point in external player."
   (interactive)
   (let* ((video (ytdious-get-current-video))
-    (start-process "ytdious player" nil
 	 (id    (ytdious-video-id-fun video)))
+    (start-process "ytdious player" "ytdious player"
 		   ytdious-player-external-command
 		   ytdious-player-external-options
-		   (concat ytdious-invidious-api-url "/watch?v=" id)))
-  (message "Starting streaming..."))
+		   (concat ytdious-invidious-api-url "/watch?v=" id))))
 
 (defun ytdious-show-image-asyncron ()
     "Display Thumbnail and Titel of video on point."
@@ -367,7 +406,7 @@ Optional argument REVERSE reverses the direction of the rotation."
 
 (defun ytdious-get-current-video ()
   "Get the currently selected video."
-  (when (<= (line-number-at-pos) (length ytdious-videos))
+  (unless (ytdious-pos-last-line-p)
     (aref ytdious-videos (1- (line-number-at-pos)))))
 
 (defun ytdious-buffer ()
