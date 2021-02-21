@@ -3,7 +3,7 @@
 
 ![demonstration](pic/demonstration.gif)
 
-This project was inspired by [elfeed](https://github.com/skeeto/elfeed/) and [Invidious](https://github.com/omarroth/invidious) (it does indeed use the Invidious APIs).
+This project uses the [Invidious](https://github.com/omarroth/invidious) API.
 
 ## Installation
 This project is on [MELPA](https://melpa.org/): you should be able to `M-x package-install RET ytdious`. Another option is to clone this repository under your `load-path`.
