@@ -21,6 +21,7 @@ Once everything is loaded `M-x ytdious` creates a new buffer and puts it in `ytd
 | <key>D</key>        | `ytdious-rotate-date-backwards` |
 | <key>r</key>        | `ytdious-rotate-sort`           |
 | <key>R</key>        | `ytdious-rotate-sort-backwards` |
+| <key>o</key>        | `ytdious-toggle-sort-direction` |
 | <key>t</key>        | `ytdious-display-full-title`    |
 | <key>s</key>        | `ytdious-search`                |
 | <key>></key>        | `ytdious-search-next-page`      |

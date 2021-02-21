@@ -53,6 +53,9 @@
 			   '(relevance rating upload_date view_count))
   "Availible sort options.")
 
+(defvar-local ytdious-sort-reverse nil
+  "Toggle for sorting videos descending/ascending.")
+
 (defvar ytdious-timer nil
   "Timer object used by `ytdious-play-continious'")
 
@@ -135,6 +138,7 @@ too long).")
     (define-key map "D" #'ytdious-rotate-date-backwards)
     (define-key map "r" #'ytdious-rotate-sort)
     (define-key map "R" #'ytdious-rotate-sort-backwards)
+    (define-key map "o" #'ytdious-toggle-sort-direction)
     (define-key map "t" #'ytdious-display-full-title)
     (define-key map "s" #'ytdious-search)
     (define-key map ">" #'ytdious-search-next-page)
@@ -172,6 +176,13 @@ Key bindings:
 	(ytdious-play-external)
 	(setq ytdious-timer-buffer (current-buffer)
 	      ytdious-timer (run-with-timer 5 1 'ytdious--tick-continious-player)))))
+
+(defun ytdious-toggle-sort-direction ()
+  "Toggles the sortation of the video List"
+  (interactive)
+  (setq ytdious-sort-reverse
+	(not ytdious-sort-reverse))
+  (ytdious--draw-buffer))
 
 (defun ytdious-stop-continious ()
   "Stop continious player"
@@ -302,8 +313,10 @@ Optional argument _NOCONFIRM revert expects this param."
     (setq tabulated-list-format `[("Date" 10 t)
 				  ("Author" ,ytdious-author-name-reserved-space t)
 				  ("Length" 8 t) ("Title"  ,ytdious-title-video-reserved-space t)
-    (setf ytdious-videos (ytdious--query ytdious-search-term ytdious-current-page))
 				  ("Views" 10 nil . (:right-align t))])
+    (when (null ytdious-videos)
+      (setf ytdious-videos (ytdious--query ytdious-search-term
+					   ytdious-current-page)))
 
     (if (get-buffer new-buffer-name)
 	(switch-to-buffer (get-buffer-create new-buffer-name))
@@ -312,7 +325,10 @@ Optional argument _NOCONFIRM revert expects this param."
     (setq-local mode-line-misc-info `(("page:" ,page-number)
 				      (" date:" ,date-limit)
 				      (" sort:" ,sort-limit)))
-    (setq tabulated-list-entries (mapcar #'ytdious--create-entry ytdious-videos))
+    (setq tabulated-list-entries
+	  (mapcar #'ytdious--create-entry
+		  (if ytdious-sort-reverse (reverse ytdious-videos)
+		    ytdious-videos)))
     (tabulated-list-init-header)
     (tabulated-list-print)
     (ytdious-show-image-asyncron)))
