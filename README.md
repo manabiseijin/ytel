@@ -1,5 +1,5 @@
 # ytdious
-`ytdious` is an experimental YouTube "frontend" for Emacs. It's goal is to allow the user to collect the results of a YouTube search in an elfeed-like buffer and then manipulate them with Emacs Lisp. The gif below shows that `ytdious` can be used to play videos in an external player, to learn how to emulate it refer to the [usage](#usage) section below.
+`ytdious` is an experimental YouTube "frontend" for Emacs. You can search and list YouTube videos sort them and play them either one by one or continiously. `ytdious` can be used to launch operations on videos with external tools, to learn how to do that refer to the [usage](#usage) section below.
 
 ![demonstration](pic/demonstration.gif)
 
@@ -70,10 +70,11 @@ It is also possible to customize the sorting criterion of the results by setting
 The default value is `relevance`.
 
 ## Potential problems and potential fixes
-`ytdious` does not use the official YouTube APIs but relies on the [Invidious](https://github.com/omarroth/invidious) APIs (that in turn circumvent YouTube ones). The variable `ytdious-invidious-api-url` points to the invidious instance (by default `https://invidio.us`) to use; you might not need to ever touch this, but if [invidio.us](https://invidio.us) goes down keep in mind that you can choose [another instance](https://github.com/omarroth/invidious#invidious-instances). Moreover the default Invidious instance is generally speaking stable, but sometimes your `ytdious-search` might hang; in that case `C-g` and retry.
+`ytdious` does not use the official YouTube APIs but relies on the [Invidious](https://github.com/omarroth/invidious) APIs (that in turn circumvent YouTube ones). The variable `ytdious-invidious-api-url` points to the invidious instance (by default `https://invidio.us`) to use, this server is not up anymore therefor you have to choose [another instance](https://github.com/omarroth/invidious#invidious-instances). Sometimes `ytdious` might hang; in that case `C-g` and retry.
 
 ## Contributing
-Feel free to open an issue or send a pull request. I'm quite new to writing Emacs packages so any help is appreciated.
+Feel free to open an issue or send a pull request, help is appreciated.
+To prevent redundant work I suggest to give me a heads up first, I don't always push out changes for immediately till I am happy with the quality and have it tested for a while, I could add then a TODO list or we can coordinate through bug reports.
 
 ## FAQ
 
