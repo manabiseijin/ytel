@@ -182,7 +182,9 @@ Key bindings:
   (interactive)
   (setq ytdious-sort-reverse
 	(not ytdious-sort-reverse))
-  (ytdious--draw-buffer))
+  (defvar ytdious-skip-request)
+  (let* ((ytdious-skip-request t))
+    (ytdious--draw-buffer nil)))
 
 (defun ytdious-stop-continious ()
   "Stop continious player"
@@ -314,7 +316,7 @@ Optional argument _NOCONFIRM revert expects this param."
 				  ("Author" ,ytdious-author-name-reserved-space t)
 				  ("Length" 8 t) ("Title"  ,ytdious-title-video-reserved-space t)
 				  ("Views" 10 nil . (:right-align t))])
-    (when (null ytdious-videos)
+    (unless (boundp 'ytdious-skip-request)
       (setf ytdious-videos (ytdious--query ytdious-search-term
 					   ytdious-current-page)))
 
