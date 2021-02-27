@@ -167,7 +167,8 @@ Key bindings:
   "Play videos continiously from point"
   (interactive)
   (message "starting continious playback")
-  (cancel-timer ytdious-timer)
+  (when ytdious-timer
+    (cancel-timer ytdious-timer))
   (let* ((process "ytdious player"))
     (when (processp process)
       (kill-process process)))
