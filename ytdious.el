@@ -172,11 +172,12 @@ Key bindings:
   (let* ((process "ytdious player"))
     (when (processp process)
       (kill-process process)))
+  (setq ytdious-timer-buffer (current-buffer))
   (if ytdious-player-external
-      (progn
-	(ytdious-play-external)
-	(setq ytdious-timer-buffer (current-buffer)
-	      ytdious-timer (run-with-timer 5 1 'ytdious--tick-continious-player)))))
+      (progn (ytdious-play-external)
+	     (setq ytdious-timer (run-with-timer 5 1 'ytdious--tick-continious-player)))
+    (progn (ytdious-play-emms)
+	   (setq ytdious-timer (run-with-timer 7 7 'ytdious--tick-continious-player)))))
 
 (defun ytdious-toggle-sort-direction ()
   "Toggles the sortation of the video List"
@@ -199,12 +200,24 @@ Key bindings:
 
 (defun ytdious--tick-continious-player ()
   "Keeps continious player running till reached end"
-  (unless (process-status "ytdious player")
-    (with-current-buffer ytdious-timer-buffer
-      (ytdious-next-line)
-      (if (ytdious-pos-last-line-p)
-	  (ytdious-stop-continious)
-	(ytdious-play-external)))))
+  (let* ((end-reached (or (and ytdious-player-external
+			       (not (process-status "ytdious player")))
+			  (and (not ytdious-player-external)
+			       (not emms-player-playing-p)))))
+    (when end-reached
+      (with-current-buffer ytdious-timer-buffer
+	(ytdious-next-line)
+	(if (ytdious-pos-last-line-p)
+	    (ytdious-stop-continious)
+	  (if ytdious-player-external
+	      (ytdious-play-external)
+	    (ytdious-play-emms)))))))
+
+(defun ytdious-play-emms ()
+  "Play video at point in emms."
+  (let* ((id (tabulated-list-get-id)))
+    (emms-play-url (concat ytdious-invidious-api-url "/watch?v=" id))))
+
 (defun ytdious-play-external ()
   "Play video at point in external player."
   (interactive)
