@@ -33,7 +33,7 @@
 ;; Visit Readme for more information.
 ;;
 ;; ytdious is based/forked on/from ytel but ads some nice features to make it more
-;; usable for browsing and binch watching. (more here: https://github.com/gRastello/ytel).
+;; usable for browsing and binch watching.  (more here: https://github.com/gRastello/ytel).
 ;;
 ;; ytdious works by querying YouTube via the Invidious apis (learn more on that here:
 ;; https://github.com/omarroth/invidious).
@@ -57,19 +57,19 @@
   "Toggle for sorting videos descending/ascending.")
 
 (defvar ytdious-timer nil
-  "Timer object used by `ytdious-play-continious'")
+  "Timer object used by `ytdious-play-continious'.")
 
 (defvar ytdious-timer-buffer nil
-  "Timer buffer object used by `ytdious-play-continious'")
+  "Timer buffer object used by `ytdious-play-continious'.")
 
 (defvar ytdious-player-external t
-  "Whether to use an external player")
+  "Whether to use an external player.")
 
 (defvar ytdious-player-external-command "mpv"
-  "Command for external player")
+  "Command for external player.")
 
 (defvar ytdious-player-external-options "--ytdl-format=bestvideo[height<=?1080]+bestaudio/best"
-  "Options for external player")
+  "Options for external player.")
 
 (defvar ytdious-date-options (ring-convert-sequence-to-ring '(hour today week month year all))
   "Availible date options.")
@@ -165,12 +165,12 @@ Key bindings:
   (setq-local revert-buffer-function #'ytdious--draw-buffer))
 
 (defun ytdious-play ()
-  "Play video at point"
+  "Play video at point."
   (interactive)
   (if ytdious-player-external (ytdious-play-external)))
 
 (defun ytdious-play-continious ()
-  "Play videos continiously from point"
+  "Play videos continiously from point."
   (interactive)
   (message "starting continious playback")
   (when ytdious-timer
@@ -186,7 +186,7 @@ Key bindings:
 	   (setq ytdious-timer (run-with-timer 7 7 'ytdious--tick-continious-player)))))
 
 (defun ytdious-toggle-sort-direction ()
-  "Toggles the sortation of the video List"
+  "Toggle the sortation of the video List."
   (interactive)
   (setq ytdious-sort-reverse
 	(not ytdious-sort-reverse))
@@ -195,17 +195,17 @@ Key bindings:
     (ytdious--draw-buffer nil)))
 
 (defun ytdious-stop-continious ()
-  "Stop continious player"
+  "Stop continious player."
   (interactive)
   (cancel-timer ytdious-timer)
   (message "continious playback stopped"))
 
 (defun ytdious-pos-last-line-p ()
-  "Checks if cursor is in last empty line"
+  "Check if cursor is in last empty line."
   (> (line-number-at-pos) (length ytdious-videos)))
 
 (defun ytdious--tick-continious-player ()
-  "Keeps continious player running till reached end"
+  "Keep continious player running till end is reached."
   (let* ((end-reached (or (and ytdious-player-external
 			       (not (process-status "ytdious player")))
 			  (and (not ytdious-player-external)
@@ -397,7 +397,8 @@ Optional argument _NOCONFIRM revert expects this param."
   (ytdious--draw-buffer))
 
 (defun ytdious-search-recent ()
-  "docstring"
+  "Start a search youtube with recent search string.
+Mostly this is useful to return from a channel view back to search overview"
   (interactive)
   (ytdious-search (read-from-minibuffer "Search terms: " ytdious-search-term)))
 
@@ -502,9 +503,9 @@ Optional argument REVERSE reverses the direction of the rotation."
 
 (defun ytdious--API-call (method args &optional ucid)
   "Perform a call to the invidious API method METHOD passing ARGS.
-
 Curl is used to perform the request.  An error is thrown if it exits with a non
-zero exit code otherwise the request body is parsed by `json-read' and returned."
+zero exit code otherwise the request body is parsed by `json-read' and returned.
+Optional argument UCID of the channel which video you want to see."
   (with-temp-buffer
     (let ((exit-code (call-process "curl" nil t nil
 				   "--silent"
