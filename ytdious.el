@@ -53,6 +53,24 @@
 			   '(relevance rating upload_date view_count))
   "Availible sort options.")
 
+(defvar-local ytdious-sort-reverse nil
+  "Toggle for sorting videos descending/ascending.")
+
+(defvar ytdious-timer nil
+  "Timer object used by `ytdious-play-continious'")
+
+(defvar ytdious-timer-buffer nil
+  "Timer buffer object used by `ytdious-play-continious'")
+
+(defvar ytdious-player-external t
+  "Whether to use an external player")
+
+(defvar ytdious-player-external-command "mpv"
+  "Command for external player")
+
+(defvar ytdious-player-external-options "--ytdl-format=bestvideo[height<=?1080]+bestaudio/best"
+  "Options for external player")
+
 (defvar ytdious-date-options (ring-convert-sequence-to-ring '(hour today week month year all))
   "Availible date options.")
 
@@ -119,12 +137,11 @@ too long).")
     (suppress-keymap map)
     (define-key map "q" #'ytdious-quit)
     (define-key map "h" #'describe-mode)
-    (define-key map "n" #'next-line)
-    (define-key map "p" #'previous-line)
     (define-key map "d" #'ytdious-rotate-date)
     (define-key map "D" #'ytdious-rotate-date-backwards)
     (define-key map "r" #'ytdious-rotate-sort)
     (define-key map "R" #'ytdious-rotate-sort-backwards)
+    (define-key map "o" #'ytdious-toggle-sort-direction)
     (define-key map "t" #'ytdious-display-full-title)
     (define-key map "s" #'ytdious-search)
     (define-key map "S" #'ytdious-search-recent)
@@ -132,6 +149,9 @@ too long).")
     (define-key map "C" #'ytdious-view-channel-at-point)
     (define-key map ">" #'ytdious-search-next-page)
     (define-key map "<" #'ytdious-search-previous-page)
+    (define-key map (kbd "RET") #'ytdious-play)
+    (define-key map [(control return)] #'ytdious-play-continious)
+    (define-key map [(control escape)] #'ytdious-stop-continious)
     (define-key map [remap next-line] #'ytdious-next-line)
     (define-key map [remap previous-line] #'ytdious-previous-line)
     map)
@@ -144,16 +164,85 @@ Key bindings:
   (setq-local split-height-threshold 22)
   (setq-local revert-buffer-function #'ytdious--draw-buffer))
 
+(defun ytdious-play ()
+  "Play video at point"
+  (interactive)
+  (if ytdious-player-external (ytdious-play-external)))
+
+(defun ytdious-play-continious ()
+  "Play videos continiously from point"
+  (interactive)
+  (message "starting continious playback")
+  (when ytdious-timer
+    (cancel-timer ytdious-timer))
+  (let* ((process "ytdious player"))
+    (when (processp process)
+      (kill-process process)))
+  (setq ytdious-timer-buffer (current-buffer))
+  (if ytdious-player-external
+      (progn (ytdious-play-external)
+	     (setq ytdious-timer (run-with-timer 5 1 'ytdious--tick-continious-player)))
+    (progn (ytdious-play-emms)
+	   (setq ytdious-timer (run-with-timer 7 7 'ytdious--tick-continious-player)))))
+
+(defun ytdious-toggle-sort-direction ()
+  "Toggles the sortation of the video List"
+  (interactive)
+  (setq ytdious-sort-reverse
+	(not ytdious-sort-reverse))
+  (defvar ytdious-skip-request)
+  (let* ((ytdious-skip-request t))
+    (ytdious--draw-buffer nil)))
+
+(defun ytdious-stop-continious ()
+  "Stop continious player"
+  (interactive)
+  (cancel-timer ytdious-timer)
+  (message "continious playback stopped"))
+
+(defun ytdious-pos-last-line-p ()
+  "Checks if cursor is in last empty line"
+  (> (line-number-at-pos) (length ytdious-videos)))
+
+(defun ytdious--tick-continious-player ()
+  "Keeps continious player running till reached end"
+  (let* ((end-reached (or (and ytdious-player-external
+			       (not (process-status "ytdious player")))
+			  (and (not ytdious-player-external)
+			       (not emms-player-playing-p)))))
+    (when end-reached
+      (with-current-buffer ytdious-timer-buffer
+	(ytdious-next-line)
+	(if (ytdious-pos-last-line-p)
+	    (ytdious-stop-continious)
+	  (if ytdious-player-external
+	      (ytdious-play-external)
+	    (ytdious-play-emms)))))))
+
+(defun ytdious-play-emms ()
+  "Play video at point in emms."
+  (let* ((id (tabulated-list-get-id)))
+    (emms-play-url (concat ytdious-invidious-api-url "/watch?v=" id))))
+
+(defun ytdious-play-external ()
+  "Play video at point in external player."
+  (interactive)
+  (let* ((id (tabulated-list-get-id)))
+    (start-process "ytdious player" "ytdious player"
+		   ytdious-player-external-command
+		   ytdious-player-external-options
+		   (concat ytdious-invidious-api-url "/watch?v=" id))))
+
 (defun ytdious-show-image-asyncron ()
     "Display Thumbnail and Titel of video on point."
     (interactive)
     (if-let ((video (ytdious-get-current-video))
 	     (id    (ytdious-video-id-fun video))
-	     (title (assoc-default 'title (ytdious-get-current-video))))
+	     (title (assoc-default 'title video)))
 	(url-retrieve
 	 (format "%s/vi/%s/mqdefault.jpg"
 		 ytdious-invidious-api-url id)
-	 'ytdious-display-video-detail-popup (list title))))
+	 'ytdious-display-video-detail-popup (list title) t)))
 
 (defun ytdious-display-video-detail-popup (_status title)
     "Create or raise popup-buffer with video details.
@@ -245,11 +334,12 @@ Optional argument _NOCONFIRM revert expects this param."
     (setq tabulated-list-format `[("Date" 10 t)
 				  ("Author" ,ytdious-author-name-reserved-space t)
 				  ("Length" 8 t) ("Title"  ,ytdious-title-video-reserved-space t)
-				  ("Views" 10 t . (:right-align t))])
-    (setf ytdious-videos
-	  (funcall
-	   (if ytdious-channel 'ytdious--query-channel 'ytdious--query)
-	   title ytdious-current-page))
+				  ("Views" 10 nil . (:right-align t))])
+    (unless (boundp 'ytdious-skip-request)
+      (setf ytdious-videos
+	    (funcall
+	     (if ytdious-channel 'ytdious--query-channel 'ytdious--query)
+	     title)))
     (let* ((title-string
 	    (propertize
 	     (apply 'format "[%s: %s]"
@@ -263,26 +353,28 @@ Optional argument _NOCONFIRM revert expects this param."
       (if (get-buffer new-buffer-name)
 	  (switch-to-buffer (get-buffer-create new-buffer-name))
 	(rename-buffer new-buffer-name)))
-
     (setq-local mode-line-misc-info `(("page:" ,page-number)
 				      (" date:" ,date-limit)
 				      (" sort:" ,sort-limit)))
-    (setq tabulated-list-entries (mapcar #'ytdious--create-entry ytdious-videos))
+    (setq tabulated-list-entries
+	  (mapcar #'ytdious--create-entry
+		  (if ytdious-sort-reverse (reverse ytdious-videos)
+		    ytdious-videos)))
     (tabulated-list-init-header)
     (tabulated-list-print)
     (ytdious-show-image-asyncron)))
 
-(defun ytdious--query (string n)
-  "Query youtube for STRING, return the Nth page of results."
+(defun ytdious--query (string)
+  "Query youtube for STRING."
   (let ((videos (ytdious--API-call "search" `(("q" ,string)
 					   ("date" ,(symbol-name ytdious-date-criterion))
                                            ("sort_by" ,(symbol-name ytdious-sort-criterion))
-					   ("page" ,n)
+					   ("page" ,ytdious-current-page)
 					   ("fields" ,ytdious-invidious-default-query-fields)))))
     videos))
 
-(defun ytdious--query-channel (string n)
-  "Query youtube for STRING, return the Nth page of results."
+(defun ytdious--query-channel (string)
+  "Show youtube channel STRING."
   (let ((videos (ytdious--API-call "channels/videos" nil string)))
     videos))
 
@@ -308,7 +400,6 @@ Optional argument _NOCONFIRM revert expects this param."
   "docstring"
   (interactive)
   (ytdious-search (read-from-minibuffer "Search terms: " ytdious-search-term)))
-
 
 (defun ytdious-view-channel (channel)
   "Open youtube `CHANNEL', and redraw the buffer."
@@ -386,8 +477,11 @@ Optional argument REVERSE reverses the direction of the rotation."
 
 (defun ytdious-get-current-video ()
   "Get the currently selected video."
-  (when (<= (line-number-at-pos) (length ytdious-videos))
-    (aref ytdious-videos (1- (line-number-at-pos)))))
+  (unless (ytdious-pos-last-line-p)
+    (seq-find (lambda (video)
+		(equal (tabulated-list-get-id)
+		       (assoc-default 'videoId video)))
+	      ytdious-videos)))
 
 (defun ytdious-buffer ()
   "Name for the main ytdious buffer."
